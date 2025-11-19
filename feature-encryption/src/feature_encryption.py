@@ -96,11 +96,9 @@ class FeatureEncryption:
         self._store_helper_data(device_id, P)
         self._store_thresholds(device_id, theta_L, theta_H)
 
-        # Step 3: 注册阶段也需要纠错，得到稳定的S
-        # 这样注册和认证使用相同的S，确保密钥一致
-        S_bits, success = self.fuzzy_extractor.extract_stable_key(r, P)
-        if not success:
-            raise ValueError(f"Registration BCH decoding failed for device {device_id}")
+        # Step 3: 注册阶段直接使用r作为S（无需BCH解码）
+        # 根据算法规范：注册时 S = r，认证时 S = error_correction(r', P)
+        S_bits = r
 
         # Step 4: 将比特串转换为字节串
         S_bytes = self.key_derivation.bits_to_bytes(S_bits)
