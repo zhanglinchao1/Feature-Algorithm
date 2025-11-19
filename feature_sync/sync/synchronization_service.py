@@ -170,12 +170,13 @@ class SynchronizationService:
 
     def get_current_epoch(self) -> int:
         """获取当前epoch"""
-        if self.validator:
+        # 优先返回cluster_head的epoch（如果是簇首节点）
+        if self.cluster_head:
+            return self.cluster_head.get_current_epoch()
+        elif self.validator:
             return self.validator.get_current_epoch()
         elif self.device:
             return self.device.get_current_epoch()
-        elif self.cluster_head:
-            return self.cluster_head.get_current_epoch()
         return 0
 
     def is_epoch_valid(self, epoch: int) -> bool:
@@ -196,10 +197,11 @@ class SynchronizationService:
 
     def get_feature_config(self) -> Optional[FeatureConfig]:
         """获取当前特征配置"""
-        if self.validator:
-            return self.validator.get_feature_config()
-        elif self.cluster_head:
+        # 优先返回cluster_head的配置（如果是簇首节点）
+        if self.cluster_head:
             return self.cluster_head.get_feature_config()
+        elif self.validator:
+            return self.validator.get_feature_config()
         elif self.device:
             return self.device.epoch_state.current_config
         return None

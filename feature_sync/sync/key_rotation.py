@@ -97,6 +97,9 @@ class KeyRotationManager:
             valid_until=now + epoch_duration
         )
 
+        # 存储到epoch_state
+        self.epoch_state.add_key_material(device_mac, key_material)
+
         logger.info(f"Key material generated: device={device_mac.hex()}, "
                    f"epoch={epoch}, pseudonym={pseudonym.hex()}")
 
