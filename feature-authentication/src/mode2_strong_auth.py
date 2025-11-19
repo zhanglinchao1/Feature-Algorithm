@@ -479,9 +479,9 @@ class VerifierSide:
         # Step 4: Tag校验
         logger.info("Step 4: Verifying authentication Tag...")
 
-        # 构造AuthContext
+        # 构造AuthContext - 使用真实的dev_id，与设备端保持一致
         context = AuthContext(
-            src_mac=auth_req.dev_pseudo[:6],  # 临时
+            src_mac=dev_id,  # 使用真实的设备MAC地址，不是伪名
             dst_mac=self.issuer_id,
             epoch=auth_req.epoch,
             nonce=auth_req.nonce,
