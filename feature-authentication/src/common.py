@@ -311,8 +311,8 @@ class AuthReq:
         if self.ver < 0 or self.ver > 255:
             raise ValueError(f"ver must be in [0, 255], got {self.ver}")
 
-        if len(self.digest) != 32:
-            raise ValueError(f"digest must be 32 bytes, got {len(self.digest)}")
+        if len(self.digest) not in [8, 16, 32]:
+            raise ValueError(f"digest must be 8/16/32 bytes, got {len(self.digest)}")
 
         if len(self.tag) not in [12, 16, 20, 24, 32]:
             raise ValueError(f"tag must be 12-32 bytes, got {len(self.tag)}")
