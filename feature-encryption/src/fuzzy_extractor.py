@@ -44,9 +44,14 @@ class FuzzyExtractor:
         )
 
         # BCH参数
-        self.n = self.config.BCH_N  # 码字长度
-        self.k = self.config.BCH_K  # 消息长度
+        self.n = self.config.BCH_N  # BCH多项式参数（255比特）
+        self.k = self.config.BCH_K  # 消息长度（131比特）
         self.t = self.config.BCH_T  # 纠错能力
+
+        # 实际码字长度（字节级）
+        self.msg_bytes = (self.k + 7) // 8  # 17字节
+        self.actual_codeword_bytes = self.msg_bytes + self.bch.ecc_bytes  # 35字节
+        self.actual_codeword_bits = self.actual_codeword_bytes * 8  # 280比特
 
     def generate_helper_data(self, r: List[int]) -> bytes:
         """
@@ -93,11 +98,12 @@ class FuzzyExtractor:
             # 码字 = 消息 + ECC
             codeword_bytes = msg_bytes + ecc_bytes
 
-            # 转换为比特
-            codeword_bits = self._bytes_to_bits(codeword_bytes, self.n)
+            # 转换为比特（使用实际码字长度，不截断）
+            codeword_bits = self._bytes_to_bits(codeword_bytes)  # 280比特
 
             # 计算辅助串：helper = codeword XOR r_padded
-            r_padded = r_block + [0] * (self.n - len(r_block))
+            # r_padded需要扩展到与codeword相同的长度
+            r_padded = r_block + [0] * (self.actual_codeword_bits - len(r_block))
             helper_bits = [c ^ r_b for c, r_b in zip(codeword_bits, r_padded)]
 
             # 转换为字节
@@ -139,8 +145,8 @@ class FuzzyExtractor:
         S_blocks = []
         success = True
 
-        # 计算每块的辅助数据大小
-        helper_byte_size = (self.n + 7) // 8
+        # 计算每块的辅助数据大小（使用实际码字长度）
+        helper_byte_size = self.actual_codeword_bytes  # 35字节
 
         for j in range(blocks):
             # 提取该块的r'
@@ -148,16 +154,16 @@ class FuzzyExtractor:
             end = min((j + 1) * block_size, target_bits)
             r_prime_block = r_prime[start:end]
 
-            # 补齐到n位
-            r_prime_padded = r_prime_block + [0] * (self.n - len(r_prime_block))
+            # 补齐到实际码字长度
+            r_prime_padded = r_prime_block + [0] * (self.actual_codeword_bits - len(r_prime_block))
 
             # 提取该块的辅助数据
             helper_start = j * helper_byte_size
             helper_end = (j + 1) * helper_byte_size
             helper_bytes = P[helper_start:helper_end]
 
-            # 转换为比特
-            helper_bits = self._bytes_to_bits(helper_bytes, self.n)
+            # 转换为比特（使用实际码字长度）
+            helper_bits = self._bytes_to_bits(helper_bytes, self.actual_codeword_bits)
 
             # 恢复码字：codeword = helper XOR r_padded
             noisy_codeword_bits = [h ^ r for h, r in zip(helper_bits, r_prime_padded)]
@@ -166,11 +172,16 @@ class FuzzyExtractor:
             noisy_codeword_bytes = self._bits_to_bytes(noisy_codeword_bits)
 
             # 分离消息和ECC
-            msg_byte_size = (self.k + 7) // 8
+            msg_byte_size = self.msg_bytes  # 使用预计算的值
             noisy_msg = noisy_codeword_bytes[:msg_byte_size]
             ecc_bytes = noisy_codeword_bytes[msg_byte_size:]
 
-            print(f"[DEBUG] Block {j}: noisy_codeword_bytes len={len(noisy_codeword_bytes)}, msg_byte_size={msg_byte_size}, ecc_len={len(ecc_bytes)}, expected_ecc={self.bch.ecc_bytes}")
+            # 验证ECC长度
+            if len(ecc_bytes) != self.bch.ecc_bytes:
+                raise ValueError(
+                    f"ECC length mismatch: expected {self.bch.ecc_bytes} bytes, "
+                    f"got {len(ecc_bytes)} bytes"
+                )
 
             # 转换为bytearray（bchlib要求可变类型）
             noisy_msg_ba = bytearray(noisy_msg)
@@ -179,23 +190,19 @@ class FuzzyExtractor:
             # BCH解码
             try:
                 bit_flips = self.bch.decode(noisy_msg_ba, ecc_bytes_ba)
-                print(f"[DEBUG] Block {j}: bit_flips={bit_flips}, msg_len={len(noisy_msg_ba)}, ecc_len={len(ecc_bytes_ba)}")
                 if bit_flips < 0:
-                    # 解码失败
-                    print(f"[DEBUG] Block {j}: BCH decoding failed (bit_flips < 0)")
+                    # 解码失败（错误太多，超出纠错能力）
                     success = False
                     # 仍然返回未纠错的消息
                     corrected_msg = bytes(noisy_msg_ba)
                 else:
                     # 解码成功，应用纠错
-                    print(f"[DEBUG] Block {j}: BCH decoding successful, correcting...")
                     self.bch.correct(noisy_msg_ba, ecc_bytes_ba)
                     corrected_msg = bytes(noisy_msg_ba)
             except Exception as e:
                 # BCH解码异常
-                print(f"[DEBUG] Block {j}: BCH decoding exception: {e}")
                 success = False
-                corrected_msg = noisy_msg
+                corrected_msg = bytes(noisy_msg)
 
             # 转换为比特
             corrected_bits = self._bytes_to_bits(corrected_msg, self.k)

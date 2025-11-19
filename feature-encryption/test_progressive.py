@@ -221,9 +221,9 @@ class ProgressiveTest:
             config = FeatureEncryptionConfig()
             extractor = FuzzyExtractor(config)
 
-            # 生成测试比特串
+            # 生成测试比特串（使用配置的TARGET_BITS）
             logger.info("测试4.1: 生成辅助数据")
-            r = [secrets.randbelow(2) for _ in range(250)]
+            r = [secrets.randbelow(2) for _ in range(config.TARGET_BITS)]
             logger.info(f"  原始比特串长度: {len(r)}")
 
             P = extractor.generate_helper_data(r)
