@@ -14,7 +14,7 @@ except ImportError:
     import hashlib
 
 from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.kdf.hkdf import HKDF
+from cryptography.hazmat.primitives.kdf.hkdf import HKDF, HKDFExpand
 
 from .config import FeatureEncryptionConfig
 
@@ -179,14 +179,13 @@ class KeyDerivation:
         ci_bytes = struct.pack('<I', Ci)  # 4 bytes
         info = session_key_label + epoch_bytes + ci_bytes
 
-        # HKDF-Expand (PRK = K)
-        hkdf = HKDF(
+        # HKDF-Expand：只执行Expand阶段，K已经是PRK
+        hkdf_expand = HKDFExpand(
             algorithm=hashes.SHA256(),
             length=self.config.KEY_LENGTH,
-            salt=None,
             info=info,
         )
-        Ks = hkdf.derive(K)
+        Ks = hkdf_expand.derive(K)
 
         return Ks
 

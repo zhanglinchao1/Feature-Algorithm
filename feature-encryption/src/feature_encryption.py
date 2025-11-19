@@ -63,6 +63,8 @@ class FeatureEncryption:
 
         # 存储辅助数据（实际应用中应该存储在安全的数据库中）
         self._helper_data_store: Dict[str, bytes] = {}
+        # 存储门限数据
+        self._threshold_store: Dict[str, Tuple[np.ndarray, np.ndarray]] = {}
 
     def register(
         self,
@@ -90,11 +92,18 @@ class FeatureEncryption:
         # Step 2: 生成辅助数据
         P = self.fuzzy_extractor.generate_helper_data(r)
 
-        # 存储辅助数据
+        # 存储辅助数据和门限
         self._store_helper_data(device_id, P)
+        self._store_thresholds(device_id, theta_L, theta_H)
 
-        # Step 3: 将比特串转换为字节串（作为S）
-        S_bytes = self.key_derivation.bits_to_bytes(r)
+        # Step 3: 注册阶段也需要纠错，得到稳定的S
+        # 这样注册和认证使用相同的S，确保密钥一致
+        S_bits, success = self.fuzzy_extractor.extract_stable_key(r, P)
+        if not success:
+            raise ValueError(f"Registration BCH decoding failed for device {device_id}")
+
+        # Step 4: 将比特串转换为字节串
+        S_bytes = self.key_derivation.bits_to_bytes(S_bits)
 
         # Step 4: 密钥派生
         key_output = self._derive_keys(S_bytes, context)
@@ -287,6 +296,22 @@ class FeatureEncryption:
     def _load_helper_data(self, device_id: str) -> Optional[bytes]:
         """加载辅助数据"""
         return self._helper_data_store.get(device_id)
+
+    def _store_thresholds(
+        self,
+        device_id: str,
+        theta_L: np.ndarray,
+        theta_H: np.ndarray
+    ) -> None:
+        """存储量化门限"""
+        self._threshold_store[device_id] = (theta_L, theta_H)
+
+    def _load_thresholds(
+        self,
+        device_id: str
+    ) -> Optional[Tuple[np.ndarray, np.ndarray]]:
+        """加载量化门限"""
+        return self._threshold_store.get(device_id)
 
     def verify_digest(
         self,
