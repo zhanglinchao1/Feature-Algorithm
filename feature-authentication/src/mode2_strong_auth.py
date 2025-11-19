@@ -155,7 +155,7 @@ class DeviceSide:
             context: 认证上下文
 
         Returns:
-            (AuthReq, Ks): 认证请求和会话密钥
+            (AuthReq, Ks, K): 认证请求、会话密钥和特征密钥
 
         Raises:
             ValueError: 参数无效或密钥生成失败
@@ -230,7 +230,7 @@ class DeviceSide:
         logger.info(f"  Total size: {len(auth_req.serialize())} bytes")
         logger.info("="*80)
 
-        return auth_req, key_output.Ks
+        return auth_req, key_output.Ks, key_output.K
 
 
 class VerifierSide:
@@ -418,9 +418,9 @@ class VerifierSide:
         # Step 2: 重构密钥
         logger.info("Step 2: Reconstructing keys with FeatureKeyGen...")
 
-        # 转换为3.1的Context
+        # 转换为3.1的Context - 使用实际的dev_id而不是伪名
         fe_context = FEContext(
-            srcMAC=auth_req.dev_pseudo[:6],  # 使用伪名的前6字节作为临时MAC
+            srcMAC=dev_id,  # 使用实际的设备ID，与注册时一致
             dstMAC=self.issuer_id,
             dom=b'FeatureAuth',
             ver=auth_req.ver,
