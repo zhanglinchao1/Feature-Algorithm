@@ -171,6 +171,92 @@ class KeyRotationManager:
 
         return new_key_material
 
+    def authenticate_key_material(self, device_mac: bytes, validator_mac: bytes,
+                                 epoch: int, feature_vector: np.ndarray,
+                                 nonce: bytes) -> Optional[KeyMaterial]:
+        """
+        认证并恢复密钥材料（验证端使用）
+
+        与generate_key_material不同，该方法使用FE的authenticate模式，
+        可以从略有不同的特征向量中恢复相同的密钥（通过BCH纠错）
+
+        Args:
+            device_mac: 设备MAC地址(6字节)
+            validator_mac: 验证节点MAC地址(6字节)
+            epoch: 时间窗编号
+            feature_vector: 特征向量（验证端测量的CSI）
+            nonce: 随机数(16字节)
+
+        Returns:
+            KeyMaterial对象，如果认证失败则返回None
+        """
+        logger.debug(f"Authenticating key material: device={device_mac.hex()}, "
+                    f"epoch={epoch}")
+
+        # 获取哈希链计数器
+        hash_chain_counter = self._get_hash_chain_counter(device_mac, epoch)
+
+        # 调用3.1接口认证并恢复密钥
+        if self._use_real_fe and self.fe_adapter and feature_vector is not None:
+            # 真实实现：使用3.1 feature-encryption适配器的authenticate模式
+            try:
+                success, S, L, K, Ks, digest = self.fe_adapter.authenticate_device(
+                    device_mac=device_mac,
+                    validator_mac=validator_mac,
+                    feature_vector=feature_vector,
+                    epoch=epoch,
+                    nonce=nonce,
+                    hash_chain_counter=hash_chain_counter,
+                    domain=self.domain_bytes,
+                    version=1
+                )
+
+                if not success:
+                    logger.warning(f"FE authenticate failed (BCH decode error)")
+                    return None
+
+                feature_key = K
+                session_key = Ks
+                logger.debug(f"Used real FE adapter for key authentication: device={device_mac.hex()}")
+                logger.debug(f"  digest: {digest.hex()}")
+
+            except Exception as e:
+                logger.warning(f"FE adapter authenticate failed: {e}")
+                return None
+        else:
+            # Mock实现：与generate相同
+            feature_key, session_key = self._mock_derive_keys(
+                device_mac, validator_mac, epoch, nonce, hash_chain_counter
+            )
+            digest = b''  # Mock没有digest
+            logger.debug(f"Using mock FE for authentication")
+
+        # 派生伪名
+        pseudonym = KeyMaterial.derive_pseudonym(feature_key, epoch, hash_chain_counter)
+
+        # 计算有效期
+        now = int(time.time() * 1000)
+        epoch_duration = self.epoch_state.epoch_duration
+
+        key_material = KeyMaterial(
+            epoch=epoch,
+            feature_key=feature_key,
+            session_key=session_key,
+            pseudonym=pseudonym,
+            hash_chain_counter=hash_chain_counter,
+            valid_from=now,
+            valid_until=now + epoch_duration,
+            digest=digest
+        )
+
+        # 存储到epoch_state
+        self.epoch_state.add_key_material(device_mac, key_material)
+
+        logger.info(f"Key material authenticated: device={device_mac.hex()}, "
+                   f"epoch={epoch}, pseudonym={pseudonym.hex()}")
+
+        return key_material
+
     def get_key_material(self, device_mac: bytes, epoch: int) -> Optional[KeyMaterial]:
         """
         获取指定设备和epoch的密钥材料

@@ -209,7 +209,8 @@ class DeviceSide:
                     device_mac=dev_id,
                     epoch=context.epoch,
                     feature_vector=Z_frames,
-                    nonce=context.nonce
+                    nonce=context.nonce,
+                    validator_mac=context.dst_mac  # 使用context中的validator MAC
                 )
 
                 K = key_material.feature_key
@@ -501,7 +502,9 @@ class VerifierSide:
 
         # Step 2: 重构密钥
         if self.sync_service:
-            # 使用3.3的密钥生成
+            # 使用3.3的密钥生成（register模式）
+            # 注意：验证端也使用register而不是authenticate，因为它们是独立的FE实例
+            # 通过信道互惠性，验证端从自己的CSI测量应该派生出相同的密钥
             logger.info("Step 2: Reconstructing keys via SynchronizationService...")
 
             try:
@@ -509,13 +512,14 @@ class VerifierSide:
                     device_mac=dev_id,
                     epoch=auth_req.epoch,
                     feature_vector=Z_frames,
-                    nonce=auth_req.nonce
+                    nonce=auth_req.nonce,
+                    validator_mac=self.issuer_id  # 使用验证端自己的MAC
                 )
 
                 K_prime = key_material.feature_key
                 Ks_prime = key_material.session_key
                 digest_prime = key_material.digest
-                success = True  # sync_service总是成功（如果失败会抛异常）
+                success = True
 
                 logger.info(f"✓ Keys reconstructed via SynchronizationService")
                 log_key_material("K'", K_prime, logger)
