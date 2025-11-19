@@ -19,6 +19,8 @@ from .common import (
     AuthReq,
     MAT,
 )
+from .token_manager import TokenFastManager, MATManager
+from .mode2_strong_auth import DeviceSide, VerifierSide
 
 __all__ = [
     'AuthConfig',
@@ -29,4 +31,8 @@ __all__ = [
     'TokenFast',
     'AuthReq',
     'MAT',
+    'TokenFastManager',
+    'MATManager',
+    'DeviceSide',
+    'VerifierSide',
 ]
