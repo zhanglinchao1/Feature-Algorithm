@@ -234,18 +234,15 @@ class FeatureEncryptionConfig:
             f")"
         )
 
-
-# 预定义的配置场景
-class ConfigProfiles:
-    """预定义的配置场景"""
+    # ========== 预定义配置（工厂方法） ==========
 
     @staticmethod
-    def default() -> FeatureEncryptionConfig:
+    def default() -> 'FeatureEncryptionConfig':
         """默认配置"""
         return FeatureEncryptionConfig()
 
     @staticmethod
-    def high_noise() -> FeatureEncryptionConfig:
+    def high_noise() -> 'FeatureEncryptionConfig':
         """高噪声环境配置"""
         return FeatureEncryptionConfig(
             M_FRAMES=8,
@@ -254,7 +251,7 @@ class ConfigProfiles:
         )
 
     @staticmethod
-    def low_latency() -> FeatureEncryptionConfig:
+    def low_latency() -> 'FeatureEncryptionConfig':
         """低时延配置"""
         return FeatureEncryptionConfig(
             M_FRAMES=4,
@@ -264,7 +261,7 @@ class ConfigProfiles:
         )
 
     @staticmethod
-    def high_security() -> FeatureEncryptionConfig:
+    def high_security() -> 'FeatureEncryptionConfig':
         """高安全性配置"""
         return FeatureEncryptionConfig(
             TARGET_BITS=512,
@@ -272,6 +269,31 @@ class ConfigProfiles:
             KEY_LENGTH=64,
             BCH_BLOCKS=4,
         )
+
+
+# 预定义的配置场景（向后兼容，建议直接使用FeatureEncryptionConfig的静态方法）
+class ConfigProfiles:
+    """预定义的配置场景（已弃用，使用FeatureEncryptionConfig的静态方法）"""
+
+    @staticmethod
+    def default() -> FeatureEncryptionConfig:
+        """默认配置"""
+        return FeatureEncryptionConfig.default()
+
+    @staticmethod
+    def high_noise() -> FeatureEncryptionConfig:
+        """高噪声环境配置"""
+        return FeatureEncryptionConfig.high_noise()
+
+    @staticmethod
+    def low_latency() -> FeatureEncryptionConfig:
+        """低时延配置"""
+        return FeatureEncryptionConfig.low_latency()
+
+    @staticmethod
+    def high_security() -> FeatureEncryptionConfig:
+        """高安全性配置"""
+        return FeatureEncryptionConfig.high_security()
 
 
 # 导出
