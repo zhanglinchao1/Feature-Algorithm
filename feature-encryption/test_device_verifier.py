@@ -75,8 +75,8 @@ class SimulatedCSIChannel:
 class DeviceSide:
     """设备端（注册端）"""
 
-    def __init__(self, config: FeatureEncryptionConfig):
-        self.fe = FeatureEncryption(config)
+    def __init__(self, config: FeatureEncryptionConfig, deterministic_for_testing: bool = True):
+        self.fe = FeatureEncryption(config, deterministic_for_testing=deterministic_for_testing)
         self.config = config
 
     def register(self, device_id: str, csi_measurements: list, context: Context):
@@ -126,8 +126,8 @@ class DeviceSide:
 class VerifierSide:
     """验证端（认证端）"""
 
-    def __init__(self, config: FeatureEncryptionConfig):
-        self.fe = FeatureEncryption(config)
+    def __init__(self, config: FeatureEncryptionConfig, deterministic_for_testing: bool = True):
+        self.fe = FeatureEncryption(config, deterministic_for_testing=deterministic_for_testing)
         self.config = config
 
     def authenticate(self, device_id: str, csi_measurements: list, context: Context,

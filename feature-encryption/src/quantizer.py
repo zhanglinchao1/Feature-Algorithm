@@ -14,14 +14,16 @@ from .config import FeatureEncryptionConfig
 class FeatureQuantizer:
     """特征量化器"""
 
-    def __init__(self, config: FeatureEncryptionConfig):
+    def __init__(self, config: FeatureEncryptionConfig, deterministic_for_testing: bool = False):
         """
         初始化量化器
 
         Args:
             config: 算法配置
+            deterministic_for_testing: 是否使用确定性模式（仅用于测试）
         """
         self.config = config
+        self._deterministic_mode = deterministic_for_testing
 
     def compute_thresholds(
         self,
@@ -237,8 +239,7 @@ class FeatureQuantizer:
 
         return r[:target_bits]
 
-    @staticmethod
-    def _generate_secure_random_bits(n: int) -> List[int]:
+    def _generate_secure_random_bits(self, n: int) -> List[int]:
         """
         生成安全的随机比特
 
@@ -248,7 +249,11 @@ class FeatureQuantizer:
         Returns:
             List[int]: 随机比特列表
         """
-        # 使用secrets模块生成密码学安全的随机数
+        # 测试模式：使用确定性填充
+        if self._deterministic_mode:
+            return [i % 2 for i in range(n)]
+
+        # 生产模式：使用密码学安全的随机数
         random_bytes = secrets.token_bytes((n + 7) // 8)
         bits = []
         for byte in random_bytes:

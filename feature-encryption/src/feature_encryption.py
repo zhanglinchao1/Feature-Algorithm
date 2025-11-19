@@ -40,12 +40,13 @@ class KeyOutput:
 class FeatureEncryption:
     """特征加密算法主类"""
 
-    def __init__(self, config: FeatureEncryptionConfig = None):
+    def __init__(self, config: FeatureEncryptionConfig = None, deterministic_for_testing: bool = False):
         """
         初始化特征加密算法
 
         Args:
             config: 算法配置，默认使用默认配置
+            deterministic_for_testing: 是否启用测试模式（确定性随机填充），默认False
         """
         if config is None:
             config = FeatureEncryptionConfig()
@@ -57,7 +58,7 @@ class FeatureEncryption:
 
         # 初始化各模块
         self.feature_processor = FeatureProcessor(config)
-        self.quantizer = FeatureQuantizer(config)
+        self.quantizer = FeatureQuantizer(config, deterministic_for_testing=deterministic_for_testing)
         self.fuzzy_extractor = FuzzyExtractor(config)
         self.key_derivation = KeyDerivation(config)
 
