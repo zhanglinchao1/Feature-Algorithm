@@ -121,7 +121,9 @@ class ProgressiveTest:
 
             # 测试RFF处理
             logger.info("测试2.2: RFF特征处理")
-            X_rff = np.random.randn(100)
+            # 使用配置中定义的RFF特征维度
+            D_rff = config.FEATURE_DIM_RFF
+            X_rff = np.random.randn(D_rff)
             Z_rff, mask_rff = processor.process_rff(X_rff)
             logger.info(f"  ✓ RFF处理成功")
             logger.info(f"    输入维度: {X_rff.shape}")
