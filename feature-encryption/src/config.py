@@ -28,10 +28,10 @@ class FeatureEncryptionConfig:
     TARGET_BITS: int = 256  # 目标比特串长度
 
     # ==================== BCH纠错码参数 ====================
-    BCH_N: int = 255  # BCH码字长度
-    BCH_K: int = 131  # BCH消息长度
+    BCH_N: int = 255  # BCH码字长度（bchlib内部参数）
+    BCH_K: int = 128  # BCH消息长度（比特）- 修正为16字节=128比特（bchlib最大支持）
     BCH_T: int = 18  # BCH纠错能力
-    BCH_BLOCKS: int = 2  # 分块数
+    BCH_BLOCKS: int = 2  # 分块数（256比特 / 128比特 = 2块）
     BCH_POLY: int = 0x187  # BCH生成多项式
 
     # ==================== 密钥派生参数 ====================
