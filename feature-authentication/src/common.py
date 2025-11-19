@@ -352,7 +352,9 @@ class AuthReq:
         Raises:
             ValueError: 数据格式错误
         """
-        if len(data) < 12 + 4 + 4 + 16 + 4 + 1 + 1 + 32 + 12:
+        # 最小长度：12(dev_pseudo) + 4(csi_id) + 4(epoch) + 16(nonce) + 4(seq)
+        #          + 1(alg_id_len) + 1(min alg_id) + 1(ver) + 8(min digest) + 12(min tag)
+        if len(data) < 12 + 4 + 4 + 16 + 4 + 1 + 1 + 1 + 8 + 12:
             raise ValueError(f"Invalid AuthReq data length: {len(data)}")
 
         offset = 0
@@ -381,10 +383,25 @@ class AuthReq:
         ver = data[offset]
         offset += 1
 
-        digest = data[offset:offset + 32]
-        offset += 32
+        # 剩余字节 = digest + tag
+        remaining = len(data) - offset
 
-        tag = data[offset:]
+        # digest可以是8/16/32字节，tag可以是12/16/20/24/32字节
+        # 尝试找到有效的组合
+        digest = None
+        tag = None
+        valid_digest_lens = [8, 16, 32]
+        valid_tag_lens = [12, 16, 20, 24, 32]
+
+        for digest_len in valid_digest_lens:
+            tag_len = remaining - digest_len
+            if tag_len in valid_tag_lens:
+                digest = data[offset:offset + digest_len]
+                tag = data[offset + digest_len:]
+                break
+
+        if digest is None or tag is None:
+            raise ValueError(f"Cannot parse digest and tag from remaining {remaining} bytes")
 
         return AuthReq(
             dev_pseudo=dev_pseudo,
