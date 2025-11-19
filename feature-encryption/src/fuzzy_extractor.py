@@ -178,21 +178,30 @@ class FuzzyExtractor:
             noisy_msg = noisy_codeword_bytes[:msg_byte_size]
             ecc_bytes = noisy_codeword_bytes[msg_byte_size:msg_byte_size + ecc_byte_size]
 
+            print(f"[DEBUG] Block {j}: noisy_codeword_bytes len={len(noisy_codeword_bytes)}, msg_byte_size={msg_byte_size}, ecc_len={len(ecc_bytes)}, expected_ecc={self.bch.ecc_bytes}")
+
+            # 转换为bytearray（bchlib要求可变类型）
+            noisy_msg_ba = bytearray(noisy_msg)
+            ecc_bytes_ba = bytearray(ecc_bytes)
+
             # BCH解码
             try:
-                bit_flips = self.bch.decode(noisy_msg, ecc_bytes)
+                bit_flips = self.bch.decode(noisy_msg_ba, ecc_bytes_ba)
+                print(f"[DEBUG] Block {j}: bit_flips={bit_flips}, msg_len={len(noisy_msg_ba)}, ecc_len={len(ecc_bytes_ba)}")
                 if bit_flips < 0:
                     # 解码失败
+                    print(f"[DEBUG] Block {j}: BCH decoding failed (bit_flips < 0)")
                     success = False
                     # 仍然返回未纠错的消息
-                    corrected_msg = noisy_msg
+                    corrected_msg = bytes(noisy_msg_ba)
                 else:
                     # 解码成功，应用纠错
-                    corrected_msg = bytearray(noisy_msg)
-                    self.bch.correct(corrected_msg, ecc_bytes)
-                    corrected_msg = bytes(corrected_msg)
+                    print(f"[DEBUG] Block {j}: BCH decoding successful, correcting...")
+                    self.bch.correct(noisy_msg_ba, ecc_bytes_ba)
+                    corrected_msg = bytes(noisy_msg_ba)
             except Exception as e:
                 # BCH解码异常
+                print(f"[DEBUG] Block {j}: BCH decoding exception: {e}")
                 success = False
                 corrected_msg = noisy_msg
 
