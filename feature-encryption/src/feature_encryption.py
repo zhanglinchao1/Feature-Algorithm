@@ -150,8 +150,9 @@ class FeatureEncryption:
             key_output: 密钥输出（失败时为None）
             success: 是否成功
         """
-        # Step 1: 处理多帧特征，得到含噪比特串
-        r_prime, theta_L, theta_H = self.quantizer.process_multi_frames(Z_frames)
+        # Step 1: 处理多帧特征，计算新的门限并得到含噪比特串
+        # 注意：这里计算新的门限，使量化能适应当前CSI测量
+        r_prime, theta_L_new, theta_H_new = self.quantizer.process_multi_frames(Z_frames)
 
         # Step 2: 读取辅助数据
         P = self._load_helper_data(device_id)
@@ -171,9 +172,19 @@ class FeatureEncryption:
         key_output = self._derive_keys(S_bytes, context)
 
         # Step 6: 生成一致性摘要
+        # 重要：这里使用注册时存储的门限，确保digest一致
         mask_bytes = kwargs.get('mask_bytes', b'')
-        theta_L_bytes = theta_L.tobytes()
-        theta_H_bytes = theta_H.tobytes()
+
+        # 读取存储的门限用于digest计算
+        stored_thresholds = self._load_thresholds(device_id)
+        if stored_thresholds is not None:
+            theta_L_stored, theta_H_stored = stored_thresholds
+            theta_L_bytes = theta_L_stored.tobytes()
+            theta_H_bytes = theta_H_stored.tobytes()
+        else:
+            # 如果没有存储的门限（向后兼容），使用当前计算的门限
+            theta_L_bytes = theta_L_new.tobytes()
+            theta_H_bytes = theta_H_new.tobytes()
 
         digest = self.key_derivation.generate_digest(
             mask_bytes, theta_L_bytes, theta_H_bytes
