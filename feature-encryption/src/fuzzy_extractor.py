@@ -6,10 +6,8 @@
 
 import numpy as np
 from typing import List, Tuple
-try:
-    import bchlib
-except ImportError:
-    bchlib = None  # 测试时可能未安装，允许导入但使用时会报错
+import importlib
+import sys
 
 from .config import FeatureEncryptionConfig
 
@@ -26,12 +24,20 @@ class FuzzyExtractor:
         """
         self.config = config
 
-        # 初始化BCH编解码器
-        if bchlib is None:
+        # 延迟导入bchlib，避免模块级别的编码问题
+        try:
+            # 尝试使用importlib动态导入，处理可能的编码问题
+            if 'bchlib' not in sys.modules:
+                importlib.import_module('bchlib')
+            import bchlib
+        except (ImportError, UnicodeDecodeError, Exception) as e:
             raise ImportError(
-                "bchlib is not installed. Please install it: pip install bchlib"
+                f"bchlib is not installed or has encoding issues. "
+                f"Please reinstall it: pip uninstall bchlib && pip install bchlib. "
+                f"Error: {e}"
             )
 
+        # 初始化BCH编解码器
         self.bch = bchlib.BCH(
             self.config.BCH_T,  # 纠错能力
             prim_poly=self.config.BCH_POLY  # 生成多项式
