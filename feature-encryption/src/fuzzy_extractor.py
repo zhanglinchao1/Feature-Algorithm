@@ -162,13 +162,21 @@ class FuzzyExtractor:
             # 恢复码字：codeword = helper XOR r_padded
             noisy_codeword_bits = [h ^ r for h, r in zip(helper_bits, r_prime_padded)]
 
-            # 转换为字节
+            # 转换为字节 - 注意这里转换的是n位（255位），会补齐到256位（32字节）
             noisy_codeword_bytes = self._bits_to_bytes(noisy_codeword_bits)
 
-            # 分离消息和ECC
-            msg_byte_size = (self.k + 7) // 8
+            # 分离消息和ECC - 使用bch.ecc_bytes确定ECC长度
+            msg_byte_size = (self.k + 7) // 8  # 消息字节数
+            ecc_byte_size = self.bch.ecc_bytes  # ECC字节数（从BCH库获取）
+            
+            # 确保我们有足够的字节
+            total_needed = msg_byte_size + ecc_byte_size
+            if len(noisy_codeword_bytes) < total_needed:
+                # 补齐（不应该发生，但防御性编程）
+                noisy_codeword_bytes += b'\x00' * (total_needed - len(noisy_codeword_bytes))
+            
             noisy_msg = noisy_codeword_bytes[:msg_byte_size]
-            ecc_bytes = noisy_codeword_bytes[msg_byte_size:]
+            ecc_bytes = noisy_codeword_bytes[msg_byte_size:msg_byte_size + ecc_byte_size]
 
             # BCH解码
             try:

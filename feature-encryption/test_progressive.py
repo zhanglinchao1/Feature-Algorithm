@@ -7,6 +7,7 @@ import numpy as np
 import secrets
 import sys
 import logging
+import locale
 from datetime import datetime
 from pathlib import Path
 
@@ -223,7 +224,7 @@ class ProgressiveTest:
 
             # 生成测试比特串
             logger.info("测试4.1: 生成辅助数据")
-            r = [secrets.randbelow(2) for _ in range(250)]
+            r = [secrets.randbelow(2) for _ in range(config.TARGET_BITS)]
             logger.info(f"  原始比特串长度: {len(r)}")
 
             P = extractor.generate_helper_data(r)
