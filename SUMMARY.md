@@ -9,13 +9,13 @@
 - [x] 确定测试场景（2验证节点+1设备节点）
 
 ### ✅ 阶段2: 核心模块实现 (已完成)
-- [x] 核心数据结构 (feature_sync/core/)
+- [x] 核心数据结构 (feature_synchronization/core/)
   - SyncBeacon: 同步信标
   - FeatureConfig: 特征参数配置
   - KeyMaterial: 密钥材料
   - EpochState: 周期状态
 
-- [x] 同步机制 (feature_sync/sync/)
+- [x] 同步机制 (feature_synchronization/sync/)
   - ClusterHead: 簇首节点
   - ValidatorNode: 验证节点
   - DeviceNode: 设备节点
@@ -23,11 +23,11 @@
   - MATManager: MAT令牌管理器
   - SynchronizationService: 统一服务接口
 
-- [x] 网络通信 (feature_sync/network/)
+- [x] 网络通信 (feature_synchronization/network/)
   - ClusterElection: 簇首选举（Bully算法）
   - GossipProtocol: Gossip协议
 
-- [x] 密码学原语 (feature_sync/crypto/)
+- [x] 密码学原语 (feature_synchronization/crypto/)
   - HKDF: 密钥派生函数
   - SimpleHMAC: HMAC签名
   - AggregateSignature: 聚合签名
@@ -152,7 +152,7 @@
 ## 🔗 对外接口 (供3.3.2调用)
 
 ```python
-from feature_sync import SynchronizationService
+from feature_synchronization import SynchronizationService
 
 # 创建验证节点
 validator = SynchronizationService(
@@ -196,7 +196,7 @@ Feature-Algorithm/
 ├── requirements.txt                   # 依赖包
 ├── docs/
 │   └── 3.3-feature-synchronization.md # 开发文档
-├── feature_sync/                      # 主代码
+├── feature_synchronization/                      # 主代码
 │   ├── core/                         # 核心数据结构
 │   ├── sync/                         # 同步机制
 │   ├── auth/                         # 认证相关
@@ -256,13 +256,13 @@ Feature-Algorithm/
 ## 📌 重要说明
 
 ### 关于文件夹命名
-**当前**: `feature_sync/`
+**当前**: `feature_synchronization/`
 **原因**:
 - 符合Python PEP8命名规范（lowercase_with_underscores）
 - 避免导入问题（连字符在Python中不合法）
 - 简洁易用
 
-**如需修改**: 可重命名为`feature_synchronization/`（无连字符）
+**如需修改**: 可重命名为`feature_synchronizationhronization/`（无连字符）
 
 ### 已知限制
 1. **选举机制**: 使用内存队列模拟，需要网络层支持
