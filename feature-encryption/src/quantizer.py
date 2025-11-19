@@ -294,6 +294,34 @@ class FeatureQuantizer:
 
         return r, theta_L, theta_H
 
+    def quantize_with_thresholds(
+        self,
+        Z_frames: np.ndarray,
+        theta_L: np.ndarray,
+        theta_H: np.ndarray
+    ) -> List[int]:
+        """
+        使用预先计算的门限处理多帧特征
+
+        Args:
+            Z_frames: 多帧特征，shape (M, D)
+            theta_L: 下门限，shape (D,)
+            theta_H: 上门限，shape (D,)
+
+        Returns:
+            r: 比特串
+        """
+        # 量化
+        Q_frames = self.quantize_frames(Z_frames, theta_L, theta_H)
+
+        # 投票
+        r_bits, selected_dims = self.majority_vote(Q_frames)
+
+        # 补齐到目标长度
+        r = self.pad_bits_to_target(r_bits, selected_dims, Z_frames, Q_frames)
+
+        return r
+
     def compute_bit_stability(self, Q_frames: np.ndarray) -> np.ndarray:
         """
         计算每个维度的比特稳定性
