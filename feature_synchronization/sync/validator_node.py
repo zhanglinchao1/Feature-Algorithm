@@ -46,6 +46,9 @@ class ValidatorNode:
             is_synchronized=False
         )
 
+        # 初始化容忍窗口
+        self.epoch_state.update_tolerated_epochs(0)
+
         # 本地推进计数器
         self.local_progression_count = 0
         self.max_local_progression_epochs = 5
