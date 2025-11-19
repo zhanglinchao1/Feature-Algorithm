@@ -46,6 +46,8 @@ class SynchronizationService:
         self.node_type = node_type
         self.node_id = node_id
         self.peer_validators = peer_validators or []
+        self.delta_t = delta_t
+        self.beacon_interval = beacon_interval
 
         # 生成签名/验证密钥（简化实现，实际应使用密钥管理）
         self.signing_key = secrets.token_bytes(32)
@@ -143,6 +145,8 @@ class SynchronizationService:
             if winner == self.node_id:
                 self.cluster_head = ClusterHead(
                     node_id=self.node_id,
+                    delta_t=self.delta_t,
+                    beacon_interval=self.beacon_interval,
                     signing_key=self.signing_key
                 )
                 self.cluster_head.start()
