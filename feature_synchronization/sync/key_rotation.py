@@ -13,6 +13,14 @@ from ..core.epoch_state import EpochState
 from ..crypto.hkdf import derive_feature_key, derive_session_key, blake3_hash
 from ..utils.logging_config import get_logger
 
+# 导入3.1适配器
+try:
+    from ..adapters.fe_adapter import FeatureEncryptionAdapter
+    FE_ADAPTER_AVAILABLE = True
+except ImportError:
+    FE_ADAPTER_AVAILABLE = False
+    logging.warning("FeatureEncryptionAdapter not available, using mock implementation")
+
 
 logger = get_logger(__name__)
 
@@ -20,21 +28,38 @@ logger = get_logger(__name__)
 class KeyRotationManager:
     """密钥轮换管理器"""
 
-    def __init__(self, epoch_state: EpochState, domain: str = "default"):
+    def __init__(self, epoch_state: EpochState, domain: str = "default",
+                 use_real_fe: bool = True, deterministic_for_testing: bool = False):
         """
         初始化密钥轮换管理器
 
         Args:
             epoch_state: epoch状态对象
             domain: 域标识
+            use_real_fe: 是否使用真实的3.1接口（默认True）
+            deterministic_for_testing: 是否启用确定性测试模式
         """
         self.epoch_state = epoch_state
-        self.domain = domain
+        # 保存两个版本的domain：bytes用于3.1适配器，str用于Mock
+        self.domain_str = domain if isinstance(domain, str) else domain.decode('utf-8')
+        self.domain_bytes = domain.encode('utf-8') if isinstance(domain, str) else domain
+        self._use_real_fe = use_real_fe and FE_ADAPTER_AVAILABLE
+        self._deterministic_mode = deterministic_for_testing
 
-        # 3.3.1接口（待集成）
-        self.feature_key_engine = None
-
-        logger.info(f"KeyRotationManager initialized: domain={domain}")
+        # 3.1接口适配器
+        if self._use_real_fe:
+            try:
+                self.fe_adapter = FeatureEncryptionAdapter(
+                    deterministic_for_testing=deterministic_for_testing
+                )
+                logger.info(f"KeyRotationManager initialized with real FE adapter: domain={self.domain_str}")
+            except Exception as e:
+                logger.warning(f"Failed to initialize FE adapter: {e}, falling back to mock")
+                self.fe_adapter = None
+                self._use_real_fe = False
+        else:
+            self.fe_adapter = None
+            logger.info(f"KeyRotationManager initialized with mock FE: domain={domain}")
 
     def generate_key_material(self, device_mac: bytes, validator_mac: bytes,
                              epoch: int, feature_vector: Optional[np.ndarray],
@@ -58,27 +83,36 @@ class KeyRotationManager:
         # 获取哈希链计数器
         hash_chain_counter = self._get_hash_chain_counter(device_mac, epoch)
 
-        # 调用3.3.1接口派生密钥
-        # TODO: 替换为真实的3.3.1接口
-        if self.feature_key_engine:
-            # 真实实现（待集成）
-            S, L, K, Ks, digest = self.feature_key_engine.derive_keys(
-                feature_vector=feature_vector,
-                src_mac=device_mac,
-                dst_mac=validator_mac,
-                domain=self.domain,
-                version=1,
-                epoch=epoch,
-                nonce=nonce,
-                hash_chain_counter=hash_chain_counter
-            )
-            feature_key = K
-            session_key = Ks
+        # 调用3.1接口派生密钥
+        if self._use_real_fe and self.fe_adapter and feature_vector is not None:
+            # 真实实现：使用3.1 feature-encryption适配器
+            try:
+                S, L, K, Ks, digest = self.fe_adapter.derive_keys_for_device(
+                    device_mac=device_mac,
+                    validator_mac=validator_mac,
+                    feature_vector=feature_vector,
+                    epoch=epoch,
+                    nonce=nonce,
+                    hash_chain_counter=hash_chain_counter,
+                    domain=self.domain_bytes,  # FE adapter需要bytes
+                    version=1
+                )
+                feature_key = K
+                session_key = Ks
+                logger.debug(f"Used real FE adapter for key derivation: device={device_mac.hex()}")
+            except Exception as e:
+                logger.warning(f"FE adapter failed: {e}, falling back to mock")
+                # 降级到Mock
+                feature_key, session_key = self._mock_derive_keys(
+                    device_mac, validator_mac, epoch, nonce, hash_chain_counter
+                )
         else:
-            # Mock实现
+            # Mock实现（降级或无feature_vector时使用）
             feature_key, session_key = self._mock_derive_keys(
                 device_mac, validator_mac, epoch, nonce, hash_chain_counter
             )
+            if self._use_real_fe and feature_vector is None:
+                logger.debug(f"Using mock FE: feature_vector not provided")
 
         # 派生伪名
         pseudonym = KeyMaterial.derive_pseudonym(feature_key, epoch, hash_chain_counter)
@@ -188,7 +222,7 @@ class KeyRotationManager:
         feature_key = derive_feature_key(
             stable_feature=stable_feature,
             random_perturbation=random_perturbation,
-            domain=self.domain,
+            domain=self.domain_str,  # Mock需要str
             src_mac=device_mac,
             dst_mac=validator_mac,
             version=1
