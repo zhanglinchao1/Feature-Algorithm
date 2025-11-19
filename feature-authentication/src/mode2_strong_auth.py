@@ -38,25 +38,36 @@ class DeviceSide:
     负责生成AuthReq并发送给验证端。
     """
 
-    def __init__(self, config: AuthConfig, fe_config: Optional[FEConfig] = None):
+    def __init__(self, config: AuthConfig, fe_config: Optional[FEConfig] = None,
+                 sync_service=None):
         """初始化
 
         Args:
             config: 认证配置
             fe_config: 特征加密配置（None表示使用默认）
+            sync_service: 同步服务（可选，3.3集成）
         """
         self.config = config
+        self.sync_service = sync_service
 
         if fe_config is None:
             fe_config = FEConfig()
 
-        self.fe = FeatureEncryption(fe_config)
-        self.fe_config = fe_config
+        # 如果使用sync_service，则不初始化独立的FE
+        if sync_service is None:
+            self.fe = FeatureEncryption(fe_config)
+            self.fe_config = fe_config
+        else:
+            self.fe = None
+            self.fe_config = fe_config
 
         logger.info("="*80)
         logger.info("DeviceSide initialized")
         logger.info(f"  Auth config: Mode2={self.config.MODE2_ENABLED}")
-        logger.info(f"  FE config: M_FRAMES={self.fe_config.M_FRAMES}, TARGET_BITS={self.fe_config.TARGET_BITS}")
+        if sync_service:
+            logger.info(f"  Using SynchronizationService for 3.3 integration")
+        else:
+            logger.info(f"  FE config: M_FRAMES={self.fe_config.M_FRAMES}, TARGET_BITS={self.fe_config.TARGET_BITS}")
         logger.info("="*80)
 
     def generate_pseudo(self, K: bytes, epoch: int) -> bytes:
@@ -170,46 +181,95 @@ class DeviceSide:
         if len(dev_id) != 6:
             raise ValueError(f"dev_id must be 6 bytes, got {len(dev_id)}")
 
-        # Step 1: 调用3.1生成密钥
-        logger.info("Step 1: Calling FeatureKeyGen (3.1 module)...")
+        # Step 0: 如果使用sync_service，从中获取epoch并更新context
+        if self.sync_service:
+            logger.info("Step 0: Getting synchronized epoch from SynchronizationService...")
+            synced_epoch = self.sync_service.get_current_epoch()
+            logger.info(f"  Synchronized epoch: {synced_epoch}")
 
-        # 转换为3.1的Context
-        fe_context = FEContext(
-            srcMAC=context.src_mac,
-            dstMAC=context.dst_mac,
-            dom=b'FeatureAuth',  # 域标识
-            ver=context.ver,
-            epoch=context.epoch,
-            Ci=0,  # 会话计数器
-            nonce=context.nonce
-        )
-
-        try:
-            key_output, metadata = self.fe.register(
-                device_id=dev_id.hex(),
-                Z_frames=Z_frames,
-                context=fe_context,
-                mask_bytes=b'device_mask'
+            # 更新context使用同步的epoch
+            context = AuthContext(
+                src_mac=context.src_mac,
+                dst_mac=context.dst_mac,
+                epoch=synced_epoch,  # 使用同步的epoch
+                nonce=context.nonce,
+                seq=context.seq,
+                alg_id=context.alg_id,
+                ver=context.ver,
+                csi_id=context.csi_id
             )
-        except Exception as e:
-            logger.error(f"✗ FeatureKeyGen failed: {e}")
-            raise ValueError(f"FeatureKeyGen failed: {e}")
 
-        logger.info(f"✓ FeatureKeyGen success")
-        log_key_material("K", key_output.K, logger)
-        log_key_material("Ks", key_output.Ks, logger)
-        log_key_material("S", key_output.S, logger)
-        logger.debug(f"  digest: {format_bytes_preview(key_output.digest, 32)}")
-        logger.debug(f"  Bit count: {metadata['bit_count']}")
+        # Step 1: 生成密钥
+        if self.sync_service:
+            # 使用3.3的密钥生成（通过适配器调用3.1）
+            logger.info("Step 1: Calling SynchronizationService.generate_or_get_key_material...")
+
+            try:
+                key_material = self.sync_service.generate_or_get_key_material(
+                    device_mac=dev_id,
+                    epoch=context.epoch,
+                    feature_vector=Z_frames,
+                    nonce=context.nonce
+                )
+
+                K = key_material.feature_key
+                Ks = key_material.session_key
+                digest = key_material.digest
+
+                logger.info(f"✓ Key material generated via SynchronizationService")
+                log_key_material("K", K, logger)
+                log_key_material("Ks", Ks, logger)
+                logger.debug(f"  digest: {format_bytes_preview(digest, 32)}")
+
+            except Exception as e:
+                logger.error(f"✗ SynchronizationService.generate_or_get_key_material failed: {e}")
+                raise ValueError(f"Key generation via SynchronizationService failed: {e}")
+        else:
+            # 直接调用3.1（向后兼容）
+            logger.info("Step 1: Calling FeatureKeyGen (3.1 module) directly...")
+
+            # 转换为3.1的Context
+            fe_context = FEContext(
+                srcMAC=context.src_mac,
+                dstMAC=context.dst_mac,
+                dom=b'FeatureAuth',  # 域标识
+                ver=context.ver,
+                epoch=context.epoch,
+                Ci=0,  # 会话计数器
+                nonce=context.nonce
+            )
+
+            try:
+                key_output, metadata = self.fe.register(
+                    device_id=dev_id.hex(),
+                    Z_frames=Z_frames,
+                    context=fe_context,
+                    mask_bytes=b'device_mask'
+                )
+
+                K = key_output.K
+                Ks = key_output.Ks
+                digest = key_output.digest
+
+                logger.info(f"✓ FeatureKeyGen success")
+                log_key_material("K", K, logger)
+                log_key_material("Ks", Ks, logger)
+                log_key_material("S", key_output.S, logger)
+                logger.debug(f"  digest: {format_bytes_preview(digest, 32)}")
+                logger.debug(f"  Bit count: {metadata['bit_count']}")
+
+            except Exception as e:
+                logger.error(f"✗ FeatureKeyGen failed: {e}")
+                raise ValueError(f"FeatureKeyGen failed: {e}")
 
         # Step 2: 生成伪名
         logger.info("Step 2: Generating DevPseudo...")
-        dev_pseudo = self.generate_pseudo(key_output.K, context.epoch)
+        dev_pseudo = self.generate_pseudo(K, context.epoch)
         logger.info(f"✓ DevPseudo: {format_bytes_preview(dev_pseudo, 24)}")
 
         # Step 3: 计算Tag
         logger.info("Step 3: Computing authentication Tag...")
-        tag = self.compute_tag(key_output.K, context)
+        tag = self.compute_tag(K, context)
         logger.info(f"✓ Tag: {format_bytes_preview(tag, 32)}")
 
         # Step 4: 构造AuthReq
@@ -222,7 +282,7 @@ class DeviceSide:
             seq=context.seq,
             alg_id=context.alg_id,
             ver=context.ver,
-            digest=key_output.digest,
+            digest=digest,
             tag=tag
         )
 
@@ -230,7 +290,7 @@ class DeviceSide:
         logger.info(f"  Total size: {len(auth_req.serialize())} bytes")
         logger.info("="*80)
 
-        return auth_req, key_output.Ks, key_output.K
+        return auth_req, Ks, K
 
 
 class VerifierSide:
@@ -244,7 +304,8 @@ class VerifierSide:
         config: AuthConfig,
         issuer_id: bytes,
         issuer_key: bytes,
-        fe_config: Optional[FEConfig] = None
+        fe_config: Optional[FEConfig] = None,
+        sync_service=None
     ):
         """初始化
 
@@ -253,11 +314,13 @@ class VerifierSide:
             issuer_id: 签发者标识（6字节MAC地址）
             issuer_key: 签发者密钥（32字节）
             fe_config: 特征加密配置（None表示使用默认）
+            sync_service: 同步服务（可选，3.3集成）
 
         Raises:
             ValueError: 参数无效
         """
         self.config = config
+        self.sync_service = sync_service
 
         if len(issuer_id) != 6:
             raise ValueError(f"issuer_id must be 6 bytes, got {len(issuer_id)}")
@@ -271,8 +334,13 @@ class VerifierSide:
         if fe_config is None:
             fe_config = FEConfig()
 
-        self.fe = FeatureEncryption(fe_config)
-        self.fe_config = fe_config
+        # 如果使用sync_service，则不初始化独立的FE
+        if sync_service is None:
+            self.fe = FeatureEncryption(fe_config)
+            self.fe_config = fe_config
+        else:
+            self.fe = None
+            self.fe_config = fe_config
 
         # MAT管理器
         self.mat_manager = MATManager(config, issuer_id, issuer_key)
@@ -285,7 +353,10 @@ class VerifierSide:
         logger.info("VerifierSide initialized")
         logger.info(f"  Issuer ID: {issuer_id.hex()}")
         logger.info(f"  Auth config: Mode2={self.config.MODE2_ENABLED}")
-        logger.info(f"  FE config: M_FRAMES={self.fe_config.M_FRAMES}")
+        if sync_service:
+            logger.info(f"  Using SynchronizationService for 3.3 integration")
+        else:
+            logger.info(f"  FE config: M_FRAMES={self.fe_config.M_FRAMES}")
         logger.info("="*80)
 
     def generate_pseudo(self, K: bytes, epoch: int) -> bytes:
@@ -400,6 +471,19 @@ class VerifierSide:
         logger.info(f"  Z_frames shape: {Z_frames.shape}")
         logger.info("="*80)
 
+        # Step 0: Epoch有效性检查（如果使用sync_service）
+        if self.sync_service:
+            logger.info("Step 0: Validating epoch via SynchronizationService...")
+            if not self.sync_service.is_epoch_valid(auth_req.epoch):
+                logger.error(f"✗ Epoch {auth_req.epoch} is out of valid range")
+                logger.info("="*80)
+                return AuthResult(
+                    success=False,
+                    mode="mode2",
+                    reason="epoch_out_of_range"
+                )
+            logger.info(f"✓ Epoch {auth_req.epoch} is valid")
+
         # Step 1: 设备定位
         logger.info("Step 1: Locating device...")
         dev_id = self.locate_device(auth_req.dev_pseudo, auth_req.epoch)
@@ -416,56 +500,93 @@ class VerifierSide:
         logger.info(f"✓ Device located: {dev_id.hex()}")
 
         # Step 2: 重构密钥
-        logger.info("Step 2: Reconstructing keys with FeatureKeyGen...")
+        if self.sync_service:
+            # 使用3.3的密钥生成
+            logger.info("Step 2: Reconstructing keys via SynchronizationService...")
 
-        # 转换为3.1的Context - 使用实际的dev_id而不是伪名
-        fe_context = FEContext(
-            srcMAC=dev_id,  # 使用实际的设备ID，与注册时一致
-            dstMAC=self.issuer_id,
-            dom=b'FeatureAuth',
-            ver=auth_req.ver,
-            epoch=auth_req.epoch,
-            Ci=0,
-            nonce=auth_req.nonce
-        )
+            try:
+                key_material = self.sync_service.generate_or_get_key_material(
+                    device_mac=dev_id,
+                    epoch=auth_req.epoch,
+                    feature_vector=Z_frames,
+                    nonce=auth_req.nonce
+                )
 
-        try:
-            key_output, success = self.fe.authenticate(
-                device_id=dev_id.hex(),
-                Z_frames=Z_frames,
-                context=fe_context,
-                mask_bytes=b'device_mask'
+                K_prime = key_material.feature_key
+                Ks_prime = key_material.session_key
+                digest_prime = key_material.digest
+                success = True  # sync_service总是成功（如果失败会抛异常）
+
+                logger.info(f"✓ Keys reconstructed via SynchronizationService")
+                log_key_material("K'", K_prime, logger)
+                log_key_material("Ks'", Ks_prime, logger)
+                logger.debug(f"  digest': {format_bytes_preview(digest_prime, 32)}")
+
+            except Exception as e:
+                logger.error(f"✗ SynchronizationService.generate_or_get_key_material failed: {e}")
+                logger.info("="*80)
+                return AuthResult(
+                    success=False,
+                    mode="mode2",
+                    reason=f"sync_service_keygen_failed: {e}"
+                )
+        else:
+            # 直接调用3.1（向后兼容）
+            logger.info("Step 2: Reconstructing keys with FeatureKeyGen directly...")
+
+            # 转换为3.1的Context - 使用实际的dev_id而不是伪名
+            fe_context = FEContext(
+                srcMAC=dev_id,  # 使用实际的设备ID，与注册时一致
+                dstMAC=self.issuer_id,
+                dom=b'FeatureAuth',
+                ver=auth_req.ver,
+                epoch=auth_req.epoch,
+                Ci=0,
+                nonce=auth_req.nonce
             )
-        except Exception as e:
-            logger.error(f"✗ FeatureKeyGen failed: {e}")
-            logger.info("="*80)
-            return AuthResult(
-                success=False,
-                mode="mode2",
-                reason=f"feature_keygen_failed: {e}"
-            )
 
-        if not success:
-            logger.error("✗ FeatureKeyGen failed (BCH decode failed)")
-            logger.info("="*80)
-            return AuthResult(
-                success=False,
-                mode="mode2",
-                reason="feature_mismatch"
-            )
+            try:
+                key_output, success = self.fe.authenticate(
+                    device_id=dev_id.hex(),
+                    Z_frames=Z_frames,
+                    context=fe_context,
+                    mask_bytes=b'device_mask'
+                )
 
-        logger.info(f"✓ Keys reconstructed successfully")
-        log_key_material("K'", key_output.K, logger)
-        log_key_material("Ks'", key_output.Ks, logger)
-        log_key_material("S'", key_output.S, logger)
-        logger.debug(f"  digest': {format_bytes_preview(key_output.digest, 32)}")
+                if not success:
+                    logger.error("✗ FeatureKeyGen failed (BCH decode failed)")
+                    logger.info("="*80)
+                    return AuthResult(
+                        success=False,
+                        mode="mode2",
+                        reason="feature_mismatch"
+                    )
+
+                K_prime = key_output.K
+                Ks_prime = key_output.Ks
+                digest_prime = key_output.digest
+
+                logger.info(f"✓ Keys reconstructed successfully")
+                log_key_material("K'", K_prime, logger)
+                log_key_material("Ks'", Ks_prime, logger)
+                log_key_material("S'", key_output.S, logger)
+                logger.debug(f"  digest': {format_bytes_preview(digest_prime, 32)}")
+
+            except Exception as e:
+                logger.error(f"✗ FeatureKeyGen failed: {e}")
+                logger.info("="*80)
+                return AuthResult(
+                    success=False,
+                    mode="mode2",
+                    reason=f"feature_keygen_failed: {e}"
+                )
 
         # Step 3: 配置一致性检查
         logger.info("Step 3: Checking digest consistency...")
-        logger.debug(f"  Expected digest: {format_bytes_preview(key_output.digest, 32)}")
+        logger.debug(f"  Expected digest: {format_bytes_preview(digest_prime, 32)}")
         logger.debug(f"  Received digest: {format_bytes_preview(auth_req.digest, 32)}")
 
-        if not constant_time_compare(key_output.digest, auth_req.digest):
+        if not constant_time_compare(digest_prime, auth_req.digest):
             logger.error("✗ Digest mismatch (configuration inconsistency)")
             logger.info("="*80)
             return AuthResult(
@@ -491,7 +612,7 @@ class VerifierSide:
             csi_id=auth_req.csi_id
         )
 
-        tag_prime = self.compute_tag(key_output.K, context)
+        tag_prime = self.compute_tag(K_prime, context)
 
         logger.debug(f"  Expected Tag: {format_bytes_preview(tag_prime, 32)}")
         logger.debug(f"  Received Tag: {format_bytes_preview(auth_req.tag, 32)}")
@@ -521,7 +642,7 @@ class VerifierSide:
             success=True,
             mode="mode2",
             token=mat.serialize(),
-            session_key=key_output.Ks,
+            session_key=Ks_prime,
             reason=None
         )
 

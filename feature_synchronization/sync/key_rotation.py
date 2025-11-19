@@ -84,6 +84,7 @@ class KeyRotationManager:
         hash_chain_counter = self._get_hash_chain_counter(device_mac, epoch)
 
         # 调用3.1接口派生密钥
+        digest = b''  # 默认为空
         if self._use_real_fe and self.fe_adapter and feature_vector is not None:
             # 真实实现：使用3.1 feature-encryption适配器
             try:
@@ -100,17 +101,20 @@ class KeyRotationManager:
                 feature_key = K
                 session_key = Ks
                 logger.debug(f"Used real FE adapter for key derivation: device={device_mac.hex()}")
+                logger.debug(f"  digest: {digest.hex()}")
             except Exception as e:
                 logger.warning(f"FE adapter failed: {e}, falling back to mock")
                 # 降级到Mock
                 feature_key, session_key = self._mock_derive_keys(
                     device_mac, validator_mac, epoch, nonce, hash_chain_counter
                 )
+                digest = b''  # Mock没有digest
         else:
             # Mock实现（降级或无feature_vector时使用）
             feature_key, session_key = self._mock_derive_keys(
                 device_mac, validator_mac, epoch, nonce, hash_chain_counter
             )
+            digest = b''  # Mock没有digest
             if self._use_real_fe and feature_vector is None:
                 logger.debug(f"Using mock FE: feature_vector not provided")
 
@@ -128,7 +132,8 @@ class KeyRotationManager:
             pseudonym=pseudonym,
             hash_chain_counter=hash_chain_counter,
             valid_from=now,
-            valid_until=now + epoch_duration
+            valid_until=now + epoch_duration,
+            digest=digest  # 保存digest字段（用于3.2集成）
         )
 
         # 存储到epoch_state
