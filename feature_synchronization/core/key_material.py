@@ -30,9 +30,6 @@ class KeyMaterial:
     valid_from: int               # 生效时间戳(ms)
     valid_until: int              # 失效时间戳(ms)
 
-    # 配置摘要（用于3.2集成）
-    digest: bytes = b''           # 配置摘要 (8字节)，默认为空
-
     def is_valid(self, now: int) -> bool:
         """
         检查是否在有效期内
@@ -94,11 +91,6 @@ class KeyMaterial:
         data += encoder.encode_uint32(self.hash_chain_counter)
         data += encoder.encode_uint64(self.valid_from)
         data += encoder.encode_uint64(self.valid_until)
-        # 添加digest字段（可能为空）
-        if self.digest:
-            data += encoder.encode_bytes_fixed(self.digest, 8)
-        else:
-            data += encoder.encode_bytes_fixed(b'\x00' * 8, 8)
 
         return data
 
@@ -114,11 +106,6 @@ class KeyMaterial:
         hash_chain_counter = decoder.decode_uint32()
         valid_from = decoder.decode_uint64()
         valid_until = decoder.decode_uint64()
-        # 解析digest字段（可能为空）
-        digest = decoder.decode_bytes_fixed(8)
-        # 如果全为0则视为空
-        if digest == b'\x00' * 8:
-            digest = b''
 
         return KeyMaterial(
             epoch=epoch,
@@ -127,8 +114,7 @@ class KeyMaterial:
             pseudonym=pseudonym,
             hash_chain_counter=hash_chain_counter,
             valid_from=valid_from,
-            valid_until=valid_until,
-            digest=digest
+            valid_until=valid_until
         )
 
     def __repr__(self) -> str:
