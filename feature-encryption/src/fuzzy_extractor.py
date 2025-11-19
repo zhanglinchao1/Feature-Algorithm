@@ -171,10 +171,18 @@ class FuzzyExtractor:
             # 转换为字节
             noisy_codeword_bytes = self._bits_to_bytes(noisy_codeword_bits)
 
-            # 分离消息和ECC
+            # 分离消息和ECC - 使用bch.ecc_bytes确定ECC长度
             msg_byte_size = self.msg_bytes  # 使用预计算的值
+            ecc_byte_size = self.bch.ecc_bytes  # ECC字节数（从BCH库获取）
+
+            # 确保我们有足够的字节
+            total_needed = msg_byte_size + ecc_byte_size
+            if len(noisy_codeword_bytes) < total_needed:
+                # 补齐（不应该发生，但防御性编程）
+                noisy_codeword_bytes += b'\x00' * (total_needed - len(noisy_codeword_bytes))
+
             noisy_msg = noisy_codeword_bytes[:msg_byte_size]
-            ecc_bytes = noisy_codeword_bytes[msg_byte_size:]
+            ecc_bytes = noisy_codeword_bytes[msg_byte_size:msg_byte_size + ecc_byte_size]
 
             # 验证ECC长度
             if len(ecc_bytes) != self.bch.ecc_bytes:

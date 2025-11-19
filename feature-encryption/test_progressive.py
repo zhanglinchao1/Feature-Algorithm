@@ -7,6 +7,7 @@ import numpy as np
 import secrets
 import sys
 import logging
+import locale
 from datetime import datetime
 from pathlib import Path
 
