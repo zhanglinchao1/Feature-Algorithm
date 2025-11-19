@@ -3,8 +3,8 @@
 """
 import pytest
 import secrets
-from feature_sync.core.epoch_state import EpochState
-from feature_sync.sync.key_rotation import KeyRotationManager
+from feature_synchronization.core.epoch_state import EpochState
+from feature_synchronization.sync.key_rotation import KeyRotationManager
 
 
 class TestKeyRotation:
@@ -37,7 +37,7 @@ class TestKeyRotation:
 
     def test_pseudonym_derivation(self):
         """测试伪名派生"""
-        from feature_sync.core.key_material import KeyMaterial
+        from feature_synchronization.core.key_material import KeyMaterial
 
         feature_key = secrets.token_bytes(32)
         epoch = 5

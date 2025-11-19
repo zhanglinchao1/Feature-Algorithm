@@ -3,8 +3,8 @@
 """
 import pytest
 import secrets
-from feature_sync.core.beacon import SyncBeacon
-from feature_sync.core.feature_config import FeatureConfig
+from feature_synchronization.core.beacon import SyncBeacon
+from feature_synchronization.core.feature_config import FeatureConfig
 
 
 class TestSyncBeacon:

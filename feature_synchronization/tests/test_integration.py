@@ -3,7 +3,7 @@
 """
 import pytest
 import time
-from feature_sync.sync import SynchronizationService
+from feature_synchronization.sync import SynchronizationService
 
 
 class TestIntegrationTwoValidatorsOneDevice:
@@ -163,7 +163,7 @@ class TestIntegrationTwoValidatorsOneDevice:
 @pytest.fixture(scope="module")
 def setup_logging():
     """设置日志"""
-    from feature_sync.utils.logging_config import setup_logging
+    from feature_synchronization.utils.logging_config import setup_logging
     import logging
     setup_logging(level=logging.DEBUG)
 

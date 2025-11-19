@@ -20,7 +20,7 @@
 
 #### 问题1: get_feature_config()返回顺序错误 ⚠️
 **严重程度**: 高
-**位置**: `feature_sync/sync/synchronization_service.py:197-205`
+**位置**: `feature_synchronization/sync/synchronization_service.py:197-205`
 **描述**: cluster_head节点同时创建了validator对象，导致优先返回validator的未同步配置
 **状态**: ✅ 已修复
 
@@ -41,7 +41,7 @@ elif self.validator:
 
 #### 问题2: 密钥材料生成后未存储 ⚠️
 **严重程度**: 高
-**位置**: `feature_sync/sync/key_rotation.py:generate_key_material()`
+**位置**: `feature_synchronization/sync/key_rotation.py:generate_key_material()`
 **描述**: 生成的密钥材料没有调用`add_key_material()`存储到epoch_state
 **状态**: ✅ 已修复
 
@@ -53,7 +53,7 @@ self.epoch_state.add_key_material(device_mac, key_material)
 
 #### 问题3: get_current_epoch()返回顺序错误 ⚠️
 **严重程度**: 中
-**位置**: `feature_sync/sync/synchronization_service.py:171-179`
+**位置**: `feature_synchronization/sync/synchronization_service.py:171-179`
 **描述**: 与问题1类似，应优先返回cluster_head的epoch
 **状态**: ✅ 已修复
 
@@ -223,8 +223,8 @@ self.epoch_state.add_key_material(device_mac, key_material)
 ### 9.1 修复的代码变更
 
 **文件变更**:
-1. `feature_sync/sync/synchronization_service.py` - 修复get_feature_config()和get_current_epoch()顺序
-2. `feature_sync/sync/key_rotation.py` - 添加密钥材料存储逻辑
+1. `feature_synchronization/sync/synchronization_service.py` - 修复get_feature_config()和get_current_epoch()顺序
+2. `feature_synchronization/sync/key_rotation.py` - 添加密钥材料存储逻辑
 
 **测试结果对比**:
 ```
