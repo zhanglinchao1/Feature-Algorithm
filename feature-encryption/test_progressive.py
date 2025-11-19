@@ -383,7 +383,7 @@ class ProgressiveTest:
             from src.feature_encryption import FeatureEncryption, Context
 
             config = FeatureEncryptionConfig()
-            fe = FeatureEncryption(config)
+            fe = FeatureEncryption(config, deterministic_for_testing=True)  # 启用确定性测试模式
 
             # 准备上下文
             logger.info("测试6.1: 准备测试环境")
