@@ -12,10 +12,8 @@ from typing import Optional, Tuple, Dict
 import struct
 import numpy as np
 
-# 导入3.1模块（特征加密）
-sys.path.insert(0, str(Path(__file__).parent.parent.parent / 'feature-encryption'))
-from src.feature_encryption import FeatureEncryption, Context as FEContext, KeyOutput
-from src.config import FeatureEncryptionConfig
+# 导入3.1模块（特征加密）- 使用桥接模块避免命名冲突
+from ._fe_bridge import FeatureEncryption, FEContext, KeyOutput, FEConfig
 
 from .config import AuthConfig
 from .common import AuthContext, AuthReq, AuthResult, MAT, DeviceIdentity
@@ -40,7 +38,7 @@ class DeviceSide:
     负责生成AuthReq并发送给验证端。
     """
 
-    def __init__(self, config: AuthConfig, fe_config: Optional[FeatureEncryptionConfig] = None):
+    def __init__(self, config: AuthConfig, fe_config: Optional[FEConfig] = None):
         """初始化
 
         Args:
@@ -50,7 +48,7 @@ class DeviceSide:
         self.config = config
 
         if fe_config is None:
-            fe_config = FeatureEncryptionConfig()
+            fe_config = FEConfig()
 
         self.fe = FeatureEncryption(fe_config)
         self.fe_config = fe_config
@@ -246,7 +244,7 @@ class VerifierSide:
         config: AuthConfig,
         issuer_id: bytes,
         issuer_key: bytes,
-        fe_config: Optional[FeatureEncryptionConfig] = None
+        fe_config: Optional[FEConfig] = None
     ):
         """初始化
 
@@ -271,7 +269,7 @@ class VerifierSide:
         self.issuer_key = issuer_key
 
         if fe_config is None:
-            fe_config = FeatureEncryptionConfig()
+            fe_config = FEConfig()
 
         self.fe = FeatureEncryption(fe_config)
         self.fe_config = fe_config

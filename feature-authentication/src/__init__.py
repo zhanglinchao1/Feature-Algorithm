@@ -6,6 +6,13 @@ Feature-based Authentication Module
 2. 模式二：基于特征加密的强认证
 """
 
+# 添加3.1模块路径（必须在任何导入之前）
+import sys
+from pathlib import Path
+_fe_root = Path(__file__).parent.parent.parent / 'feature-encryption'
+if str(_fe_root) not in sys.path:
+    sys.path.insert(0, str(_fe_root))
+
 __version__ = "0.1.0"
 __author__ = "Feature-Algorithm Team"
 
