@@ -42,6 +42,9 @@ class DeviceNode:
             is_synchronized=False
         )
 
+        # 初始化容忍窗口
+        self.epoch_state.update_tolerated_epochs(0)
+
         logger.info(f"DeviceNode initialized: node_id={node_id.hex()}")
 
     def on_beacon_received(self, beacon: SyncBeacon) -> bool:
