@@ -17,7 +17,7 @@ Feature-Algorithm/
 ├── docs/                           # 文档目录
 │   └── 3.3-feature-synchronization.md  # 3.3.3模块开发文档
 ├── prd.docx                        # 产品需求文档
-├── feature_sync/                   # 主代码目录
+├── feature_synchronization/                   # 主代码目录
 │   ├── core/                       # 核心数据结构
 │   │   ├── __init__.py
 │   │   ├── beacon.py              # 同步信标
@@ -77,16 +77,16 @@ pip install -r requirements.txt
 
 ```bash
 # 运行所有单元测试
-python -m pytest feature_sync/tests/ -v
+python -m pytest feature_synchronization/tests/ -v
 
 # 运行集成测试（2验证节点+1设备节点）
-python -m pytest feature_sync/tests/test_integration.py -v
+python -m pytest feature_synchronization/tests/test_integration.py -v
 ```
 
 ### 示例：启动2验证节点+1设备节点
 
 ```python
-from feature_sync.sync import SynchronizationService
+from feature_synchronization.sync import SynchronizationService
 
 # 初始化验证节点
 validator1 = SynchronizationService(

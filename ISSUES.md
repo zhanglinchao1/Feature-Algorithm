@@ -3,7 +3,7 @@
 ## 测试失败问题
 
 ### 问题1: cluster_head模式下get_feature_config()返回None
-**位置**: `feature_sync/sync/synchronization_service.py:197-205`
+**位置**: `feature_synchronization/sync/synchronization_service.py:197-205`
 
 **原因**:
 - cluster_head节点同时创建了validator对象（第30-32行）
@@ -29,7 +29,7 @@ def get_feature_config(self) -> Optional[FeatureConfig]:
 ```
 
 ### 问题2: 密钥材料生成后未正确存储
-**位置**: `feature_sync/sync/key_rotation.py:generate_key_material()`
+**位置**: `feature_synchronization/sync/key_rotation.py:generate_key_material()`
 
 **原因**:
 - `generate_key_material()`生成密钥后，没有调用`epoch_state.add_key_material()`存储
@@ -53,7 +53,7 @@ def generate_key_material(...) -> KeyMaterial:
 ```
 
 ### 问题3: get_current_epoch()逻辑问题
-**位置**: `feature_sync/sync/synchronization_service.py:171-179`
+**位置**: `feature_synchronization/sync/synchronization_service.py:171-179`
 
 **潜在问题**:
 - cluster_head节点会同时有validator和cluster_head对象
@@ -75,7 +75,7 @@ def get_current_epoch(self) -> int:
 ## 其他潜在问题
 
 ### 问题4: validator节点没有初始化epoch_state
-**位置**: `feature_sync/sync/synchronization_service.py`
+**位置**: `feature_synchronization/sync/synchronization_service.py`
 
 **描述**:
 - validator节点在未接收到信标前，epoch_state.current_epoch = 0
@@ -90,7 +90,7 @@ def get_current_epoch(self) -> int:
 在文档中明确说明validator节点需要先同步信标后才能进行认证
 
 ### 问题5: election机制中的消息队列是内存模拟
-**位置**: `feature_sync/network/election.py`
+**位置**: `feature_synchronization/network/election.py`
 
 **描述**:
 - `_wait_for_answer()`和`_wait_for_coordinator()`使用`_message_queue`
@@ -106,7 +106,7 @@ def get_current_epoch(self) -> int:
 - 或者使用进程间通信机制
 
 ### 问题6: Gossip协议回调未实际触发
-**位置**: `feature_sync/network/gossip.py`
+**位置**: `feature_synchronization/network/gossip.py`
 
 **描述**:
 - `send_message_callback`需要网络层实现

@@ -12,8 +12,8 @@ import os
 # 添加项目路径
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from feature_sync.sync import SynchronizationService
-from feature_sync.utils.logging_config import setup_logging
+from feature_synchronization.sync import SynchronizationService
+from feature_synchronization.utils.logging_config import setup_logging
 import logging
 
 
