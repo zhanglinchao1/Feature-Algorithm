@@ -9,10 +9,10 @@ import secrets
 import numpy as np
 
 # 添加src到路径
-sys.path.insert(0, str(Path(__file__).parent / 'src'))
+sys.path.insert(0, str(Path(__file__).parent))
 
-from config import FeatureEncryptionConfig
-from feature_encryption import FeatureEncryption, Context
+from src.config import FeatureEncryptionConfig
+from src.feature_encryption import FeatureEncryption, Context
 
 def test_deterministic_mode():
     """测试确定性模式是否工作"""
@@ -59,7 +59,7 @@ def test_deterministic_mode():
         print("✓ 注册成功")
         print(f"  K:  {key_output1.K.hex()[:48]}...")
         print(f"  Ks: {key_output1.Ks.hex()[:48]}...")
-        print(f"  比特数: {metadata1['num_bits']}")
+        print(f"  比特数: {metadata1.get('bit_count', metadata1.get('num_bits', 'N/A'))}")
     except Exception as e:
         print(f"✗ 注册失败: {e}")
         import traceback
