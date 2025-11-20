@@ -29,9 +29,7 @@ class SynchronizationService:
     def __init__(self, node_type: str, node_id: bytes,
                  peer_validators: Optional[List[bytes]] = None,
                  delta_t: int = 30000,
-                 beacon_interval: int = 5000,
-                 domain: str = "FeatureAuth",
-                 deterministic_for_testing: bool = False):
+                 beacon_interval: int = 5000):
         """
         初始化同步服务
 
@@ -41,8 +39,6 @@ class SynchronizationService:
             peer_validators: 其他验证节点列表（仅验证节点需要）
             delta_t: epoch周期(ms)，默认30000ms
             beacon_interval: 信标广播间隔(ms)，默认5000ms
-            domain: 域标识，默认"FeatureAuth"（与3.2认证模块兼容）
-            deterministic_for_testing: 是否启用确定性测试模式（用于单元测试）
         """
         if len(node_id) != 6:
             raise ValueError("node_id must be 6 bytes")
@@ -52,8 +48,6 @@ class SynchronizationService:
         self.peer_validators = peer_validators or []
         self.delta_t = delta_t
         self.beacon_interval = beacon_interval
-        self.domain = domain
-        self.deterministic_for_testing = deterministic_for_testing
 
         # 生成签名/验证密钥（简化实现，实际应使用密钥管理）
         self.signing_key = secrets.token_bytes(32)
@@ -98,20 +92,10 @@ class SynchronizationService:
         else:
             raise ValueError(f"Unknown node type: {node_type}")
 
-        # 初始化密钥轮换管理器（验证节点和设备节点都需要）
+        # 初始化密钥轮换管理器（仅验证节点）
         if self.validator:
-            # 验证节点使用validator的epoch_state
             self.key_rotation = KeyRotationManager(
-                epoch_state=self.validator.epoch_state,
-                domain=self.domain,  # 使用配置的domain
-                deterministic_for_testing=self.deterministic_for_testing
-            )
-        elif self.device:
-            # 设备节点使用device的epoch_state
-            self.key_rotation = KeyRotationManager(
-                epoch_state=self.device.epoch_state,
-                domain=self.domain,  # 使用配置的domain
-                deterministic_for_testing=self.deterministic_for_testing
+                epoch_state=self.validator.epoch_state
             )
         else:
             self.key_rotation = None
@@ -245,30 +229,23 @@ class SynchronizationService:
 
     def generate_or_get_key_material(self, device_mac: bytes, epoch: int,
                                     feature_vector: Optional[np.ndarray] = None,
-                                    nonce: Optional[bytes] = None,
-                                    validator_mac: Optional[bytes] = None) -> KeyMaterial:
+                                    nonce: Optional[bytes] = None) -> KeyMaterial:
         """
         生成或获取密钥材料
 
         如果已存在则返回，否则生成新的
-        注意：使用FE的register模式，适用于设备端和验证端
 
         Args:
             device_mac: 设备MAC地址（6字节）
             epoch: 时间窗编号
             feature_vector: 特征向量（可选）
             nonce: 随机数（可选，默认随机生成）
-            validator_mac: 验证节点MAC地址（可选，默认使用self.node_id）
 
         Returns:
             KeyMaterial对象
         """
         if not self.key_rotation:
             raise RuntimeError("Key rotation manager not available")
-
-        # 默认使用本节点ID作为validator_mac
-        if validator_mac is None:
-            validator_mac = self.node_id
 
         # 先尝试获取
         existing = self.get_key_material(device_mac, epoch)
@@ -282,43 +259,6 @@ class SynchronizationService:
             nonce = secrets.token_bytes(16)
 
         return self.key_rotation.generate_key_material(
-            device_mac=device_mac,
-            validator_mac=validator_mac,
-            epoch=epoch,
-            feature_vector=feature_vector,
-            nonce=nonce
-        )
-
-    def authenticate_and_recover_key_material(self, device_mac: bytes, epoch: int,
-                                             feature_vector: np.ndarray,
-                                             nonce: bytes) -> Optional[KeyMaterial]:
-        """
-        认证并恢复密钥材料（验证端使用）
-
-        使用FE的authenticate模式，可以从略有不同的特征向量中恢复相同的密钥
-        （通过BCH纠错）。适用于验证端认证设备时使用。
-
-        Args:
-            device_mac: 设备MAC地址（6字节）
-            epoch: 时间窗编号
-            feature_vector: 特征向量（验证端测量的CSI）
-            nonce: 随机数（16字节）
-
-        Returns:
-            KeyMaterial对象，如果认证失败则返回None
-        """
-        if not self.key_rotation:
-            raise RuntimeError("Key rotation manager not available")
-
-        # 先尝试获取已有的
-        existing = self.get_key_material(device_mac, epoch)
-        if existing:
-            now = int(time.time() * 1000)
-            if existing.is_valid(now):
-                return existing
-
-        # 不存在或已过期，使用authenticate模式恢复
-        return self.key_rotation.authenticate_key_material(
             device_mac=device_mac,
             validator_mac=self.node_id,
             epoch=epoch,
