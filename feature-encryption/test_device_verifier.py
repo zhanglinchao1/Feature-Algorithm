@@ -247,17 +247,17 @@ def test_scenario_1_low_noise():
     }
 
     if results['S_match']:
-        print("  ✓ 稳定特征串 S 一致")
+        print("  [OK] 稳定特征串 S 一致")
     else:
         print("  ✗ 稳定特征串 S 不一致！")
 
     if results['K_match']:
-        print("  ✓ 特征密钥 K 一致")
+        print("  [OK] 特征密钥 K 一致")
     else:
         print("  ✗ 特征密钥 K 不一致！")
 
     if results['Ks_match']:
-        print("  ✓ 会话密钥 Ks 一致")
+        print("  [OK] 会话密钥 Ks 一致")
     else:
         print("  ✗ 会话密钥 Ks 不一致！")
 
@@ -312,7 +312,7 @@ def test_scenario_2_medium_noise():
     }
 
     for key, value in results.items():
-        status = "✓" if value else "✗"
+        status = "[OK]" if value else "[FAIL]"
         print(f"  {status} {key}: {value}")
 
     return all(results.values())
@@ -364,7 +364,7 @@ def test_scenario_3_high_noise():
     }
 
     for key, value in results.items():
-        status = "✓" if value else "✗"
+        status = "[OK]" if value else "[FAIL]"
         print(f"  {status} {key}: {value}")
 
     return all(results.values())
@@ -418,7 +418,7 @@ def test_scenario_4_different_context():
 
     if success:
         keys_different = (key1.K != key2.K)
-        print(f"\n  上下文绑定测试: {'✓ PASS' if keys_different else '✗ FAIL'}")
+        print(f"\n  上下文绑定测试: {'[OK]' if keys_different else '[FAIL]'}")
         print(f"  不同上下文产生不同密钥: {keys_different}")
         return keys_different
     else:
@@ -473,19 +473,19 @@ def main():
     print("="*80)
 
     for name, passed in results.items():
-        status = "✓ PASS" if passed else "✗ FAIL"
+        status = "[OK]" if passed else "[FAIL]"
         print(f"{status} - {name}")
 
     all_passed = all(results.values())
 
     print("\n" + "="*80)
     if all_passed:
-        print("✓✓✓ 所有测试通过！算法实现正确！")
-        print("✓ P-1修复验证：注册和认证使用相同的S")
-        print("✓ P-2修复验证：Ks使用HKDF-Expand派生")
-        print("✓ P-3修复验证：门限正确保存和加载")
+        print("[OK] 所有测试通过！算法实现正确！")
+        print("[OK] P-1修复验证：注册和认证使用相同的S")
+        print("[OK] P-2修复验证：Ks使用HKDF-Expand派生")
+        print("[OK] P-3修复验证：门限正确保存和加载")
     else:
-        print("✗✗✗ 部分测试失败，需要进一步检查")
+        print("[FAIL] 部分测试失败，需要进一步检查")
     print("="*80 + "\n")
 
     return all_passed

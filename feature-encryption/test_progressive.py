@@ -40,7 +40,7 @@ class TestResult:
         self.details = {}
 
     def __str__(self):
-        status = "✓ PASS" if self.passed else "✗ FAIL"
+        status = "[OK]" if self.passed else "[FAIL]"
         return f"{status} - {self.test_name}"
 
 
@@ -67,7 +67,7 @@ class ProgressiveTest:
             # 测试默认配置
             logger.info("测试1.1: 创建默认配置")
             config = FeatureEncryptionConfig()
-            logger.info(f"  ✓ 默认配置创建成功")
+            logger.info(f"  [OK] 默认配置创建成功")
             logger.info(f"    M_FRAMES: {config.M_FRAMES}")
             logger.info(f"    TARGET_BITS: {config.TARGET_BITS}")
             logger.info(f"    BCH: ({config.BCH_N}, {config.BCH_K}, {config.BCH_T})")
@@ -75,21 +75,21 @@ class ProgressiveTest:
             # 测试配置验证
             logger.info("测试1.2: 配置验证")
             config.validate()
-            logger.info(f"  ✓ 配置验证通过")
+            logger.info(f"  [OK] 配置验证通过")
 
             # 测试预定义配置
             logger.info("测试1.3: 预定义配置")
             high_noise = FeatureEncryptionConfig.high_noise()
-            logger.info(f"  ✓ 高噪声配置: M_FRAMES={high_noise.M_FRAMES}")
+            logger.info(f"  [OK] 高噪声配置: M_FRAMES={high_noise.M_FRAMES}")
 
             low_latency = FeatureEncryptionConfig.low_latency()
-            logger.info(f"  ✓ 低延迟配置: M_FRAMES={low_latency.M_FRAMES}")
+            logger.info(f"  [OK] 低延迟配置: M_FRAMES={low_latency.M_FRAMES}")
 
             result.passed = True
             result.details['config'] = config
 
         except Exception as e:
-            logger.error(f"✗ 配置模块测试失败: {e}", exc_info=True)
+            logger.error(f"[FAIL] 配置模块测试失败: {e}", exc_info=True)
             result.error = str(e)
 
         self.results.append(result)
@@ -115,7 +115,7 @@ class ProgressiveTest:
             noise_var = 0.01
 
             Z, mask = processor.process_csi(H, noise_var)
-            logger.info(f"  ✓ CSI处理成功")
+            logger.info(f"  [OK] CSI处理成功")
             logger.info(f"    输入维度: {H.shape}")
             logger.info(f"    输出维度: {Z.shape}")
             logger.info(f"    掩码维度: {len(mask)}")
@@ -126,7 +126,7 @@ class ProgressiveTest:
             D_rff = config.FEATURE_DIM_RFF
             X_rff = np.random.randn(D_rff)
             Z_rff, mask_rff = processor.process_rff(X_rff)
-            logger.info(f"  ✓ RFF处理成功")
+            logger.info(f"  [OK] RFF处理成功")
             logger.info(f"    输入维度: {X_rff.shape}")
             logger.info(f"    输出维度: {Z_rff.shape}")
 
@@ -135,7 +135,7 @@ class ProgressiveTest:
             result.details['config'] = config
 
         except Exception as e:
-            logger.error(f"✗ 特征处理模块测试失败: {e}", exc_info=True)
+            logger.error(f"[FAIL] 特征处理模块测试失败: {e}", exc_info=True)
             result.error = str(e)
 
         self.results.append(result)
@@ -160,12 +160,12 @@ class ProgressiveTest:
             M = config.M_FRAMES
             D = 64
             Z_frames = np.random.randn(M, D)
-            logger.info(f"  ✓ 生成多帧特征: shape={Z_frames.shape}")
+            logger.info(f"  [OK] 生成多帧特征: shape={Z_frames.shape}")
 
             # 计算门限
             logger.info("测试3.2: 计算量化门限")
             theta_L, theta_H = quantizer.compute_thresholds(Z_frames)
-            logger.info(f"  ✓ 门限计算成功")
+            logger.info(f"  [OK] 门限计算成功")
             logger.info(f"    theta_L: shape={theta_L.shape}, mean={theta_L.mean():.4f}")
             logger.info(f"    theta_H: shape={theta_H.shape}, mean={theta_H.mean():.4f}")
 
@@ -173,7 +173,7 @@ class ProgressiveTest:
             logger.info("测试3.3: 量化多帧特征")
             Q_frames = quantizer.quantize_frames(Z_frames, theta_L, theta_H)
             unique_vals = np.unique(Q_frames)
-            logger.info(f"  ✓ 量化成功")
+            logger.info(f"  [OK] 量化成功")
             logger.info(f"    Q_frames: shape={Q_frames.shape}")
             logger.info(f"    量化值: {unique_vals}")
 
@@ -184,7 +184,7 @@ class ProgressiveTest:
             # 投票
             logger.info("测试3.4: 多数投票")
             r_bits, selected_dims = quantizer.majority_vote(Q_frames)
-            logger.info(f"  ✓ 投票成功")
+            logger.info(f"  [OK] 投票成功")
             logger.info(f"    生成比特数: {len(r_bits)}")
             logger.info(f"    选中维度数: {len(selected_dims)}")
             logger.info(f"    比特率: {len(r_bits)/D:.2%}")
@@ -192,7 +192,7 @@ class ProgressiveTest:
             # 完整流程
             logger.info("测试3.5: 完整量化流程")
             r, theta_L2, theta_H2 = quantizer.process_multi_frames(Z_frames)
-            logger.info(f"  ✓ 完整流程成功")
+            logger.info(f"  [OK] 完整流程成功")
             logger.info(f"    最终比特数: {len(r)}")
 
             result.passed = True
@@ -202,7 +202,7 @@ class ProgressiveTest:
             result.details['theta_H'] = theta_H2
 
         except Exception as e:
-            logger.error(f"✗ 量化投票模块测试失败: {e}", exc_info=True)
+            logger.error(f"[FAIL] 量化投票模块测试失败: {e}", exc_info=True)
             result.error = str(e)
 
         self.results.append(result)
@@ -228,7 +228,7 @@ class ProgressiveTest:
             logger.info(f"  原始比特串长度: {len(r)}")
 
             P = extractor.generate_helper_data(r)
-            logger.info(f"  ✓ 辅助数据生成成功")
+            logger.info(f"  [OK] 辅助数据生成成功")
             logger.info(f"    辅助数据长度: {len(P)} bytes")
 
             # 测试无噪声提取
@@ -240,7 +240,7 @@ class ProgressiveTest:
 
             if not success:
                 raise ValueError("无噪声提取应该成功")
-            logger.info(f"  ✓ 无噪声提取成功")
+            logger.info(f"  [OK] 无噪声提取成功")
 
             # 测试有噪声提取
             logger.info("测试4.3: 有噪声密钥提取")
@@ -258,9 +258,9 @@ class ProgressiveTest:
             if success_noisy:
                 # 验证提取的密钥是否一致
                 if S_bits == S_bits_noisy:
-                    logger.info(f"  ✓ 有噪声提取成功，密钥一致")
+                    logger.info(f"  [OK] 有噪声提取成功，密钥一致")
                 else:
-                    logger.warning(f"  ⚠ 有噪声提取成功，但密钥不一致")
+                    logger.warning(f"  [WARN] 有噪声提取成功，但密钥不一致")
             else:
                 logger.info(f"  注意: BCH无法纠正 {num_errors} 个错误")
 
@@ -277,14 +277,14 @@ class ProgressiveTest:
             logger.info(f"  提取结果: {'成功' if success_high else '失败（预期）'}")
 
             if not success_high:
-                logger.info(f"  ✓ 高噪声正确拒绝")
+                logger.info(f"  [OK] 高噪声正确拒绝")
 
             result.passed = True
             result.details['extractor'] = extractor
             result.details['helper_data'] = P
 
         except Exception as e:
-            logger.error(f"✗ 模糊提取器模块测试失败: {e}", exc_info=True)
+            logger.error(f"[FAIL] 模糊提取器模块测试失败: {e}", exc_info=True)
             result.error = str(e)
 
         self.results.append(result)
@@ -309,7 +309,7 @@ class ProgressiveTest:
             epoch = 12345
             nonce = secrets.token_bytes(16)
             L = kd.compute_L(epoch, nonce)
-            logger.info(f"  ✓ L计算成功")
+            logger.info(f"  [OK] L计算成功")
             logger.info(f"    L长度: {len(L)} bytes")
             logger.info(f"    L前16字节: {L[:16].hex()}")
 
@@ -322,7 +322,7 @@ class ProgressiveTest:
             ver = 1
 
             K = kd.derive_feature_key(S, L, dom, srcMAC, dstMAC, ver, epoch)
-            logger.info(f"  ✓ K派生成功")
+            logger.info(f"  [OK] K派生成功")
             logger.info(f"    K长度: {len(K)} bytes")
             logger.info(f"    K前16字节: {K[:16].hex()}")
 
@@ -330,7 +330,7 @@ class ProgressiveTest:
             logger.info("测试5.3: 派生会话密钥Ks")
             Ci = 0
             Ks = kd.derive_session_key(K, epoch, Ci)
-            logger.info(f"  ✓ Ks派生成功")
+            logger.info(f"  [OK] Ks派生成功")
             logger.info(f"    Ks长度: {len(Ks)} bytes")
             logger.info(f"    Ks前16字节: {Ks[:16].hex()}")
 
@@ -340,7 +340,7 @@ class ProgressiveTest:
             theta_L = np.random.randn(64).tobytes()
             theta_H = np.random.randn(64).tobytes()
             digest = kd.generate_digest(mask_bytes, theta_L, theta_H)
-            logger.info(f"  ✓ digest生成成功")
+            logger.info(f"  [OK] digest生成成功")
             logger.info(f"    digest长度: {len(digest)} bytes")
             logger.info(f"    digest: {digest.hex()}")
 
@@ -348,7 +348,7 @@ class ProgressiveTest:
             logger.info("测试5.5: 验证派生确定性")
             K2 = kd.derive_feature_key(S, L, dom, srcMAC, dstMAC, ver, epoch)
             if K == K2:
-                logger.info(f"  ✓ 相同输入产生相同密钥")
+                logger.info(f"  [OK] 相同输入产生相同密钥")
             else:
                 raise ValueError("相同输入应产生相同密钥")
 
@@ -357,15 +357,15 @@ class ProgressiveTest:
             epoch2 = 12346
             K3 = kd.derive_feature_key(S, L, dom, srcMAC, dstMAC, ver, epoch2)
             if K != K3:
-                logger.info(f"  ✓ 不同epoch产生不同密钥")
+                logger.info(f"  [OK] 不同epoch产生不同密钥")
             else:
-                logger.warning(f"  ⚠ 不同epoch应产生不同密钥")
+                logger.warning(f"  [WARN] 不同epoch应产生不同密钥")
 
             result.passed = True
             result.details['kd'] = kd
 
         except Exception as e:
-            logger.error(f"✗ 密钥派生模块测试失败: {e}", exc_info=True)
+            logger.error(f"[FAIL] 密钥派生模块测试失败: {e}", exc_info=True)
             result.error = str(e)
 
         self.results.append(result)
@@ -396,7 +396,7 @@ class ProgressiveTest:
                 Ci=0,
                 nonce=secrets.token_bytes(16)
             )
-            logger.info(f"  ✓ 上下文创建成功")
+            logger.info(f"  [OK] 上下文创建成功")
 
             # 生成基础特征
             logger.info("测试6.2: 生成模拟CSI特征")
@@ -410,7 +410,7 @@ class ProgressiveTest:
             for m in range(M):
                 noise = np.random.randn(D) * 0.1
                 Z_frames_reg[m] = base_feature + noise
-            logger.info(f"  ✓ 注册特征: shape={Z_frames_reg.shape}")
+            logger.info(f"  [OK] 注册特征: shape={Z_frames_reg.shape}")
 
             # 注册
             logger.info("测试6.3: 执行注册")
@@ -421,7 +421,7 @@ class ProgressiveTest:
                 context=context,
                 mask_bytes=b'test_mask'
             )
-            logger.info(f"  ✓ 注册成功")
+            logger.info(f"  [OK] 注册成功")
             logger.info(f"    S: {key_reg.S.hex()[:40]}...")
             logger.info(f"    K: {key_reg.K.hex()[:40]}...")
             logger.info(f"    Ks: {key_reg.Ks.hex()[:40]}...")
@@ -435,7 +435,7 @@ class ProgressiveTest:
             for m in range(M):
                 noise = np.random.randn(D) * 0.15  # 稍大噪声
                 Z_frames_auth[m] = base_feature + noise
-            logger.info(f"  ✓ 认证特征: shape={Z_frames_auth.shape}")
+            logger.info(f"  [OK] 认证特征: shape={Z_frames_auth.shape}")
 
             # 认证
             logger.info("测试6.5: 执行认证")
@@ -449,7 +449,7 @@ class ProgressiveTest:
             if not success:
                 raise ValueError("认证失败！BCH解码未成功")
 
-            logger.info(f"  ✓ 认证成功")
+            logger.info(f"  [OK] 认证成功")
             logger.info(f"    S: {key_auth.S.hex()[:40]}...")
             logger.info(f"    K: {key_auth.K.hex()[:40]}...")
             logger.info(f"    Ks: {key_auth.Ks.hex()[:40]}...")
@@ -465,20 +465,20 @@ class ProgressiveTest:
             }
 
             for name, passed in checks.items():
-                status = "✓" if passed else "✗"
+                status = "[OK]" if passed else "[FAIL]"
                 logger.info(f"    {status} {name}: {passed}")
 
             if not all(checks.values()):
                 failed = [k for k, v in checks.items() if not v]
                 raise ValueError(f"密钥一致性检查失败: {failed}")
 
-            logger.info(f"  ✓✓✓ 所有密钥完全一致！")
+            logger.info(f"  [OK][OK][OK] 所有密钥完全一致！")
 
             result.passed = True
             result.details['all_checks_passed'] = all(checks.values())
 
         except Exception as e:
-            logger.error(f"✗ 完整集成流程测试失败: {e}", exc_info=True)
+            logger.error(f"[FAIL] 完整集成流程测试失败: {e}", exc_info=True)
             result.error = str(e)
 
         self.results.append(result)
@@ -527,12 +527,12 @@ class ProgressiveTest:
         logger.info("\n" + "="*80)
         logger.info(f"测试完成: {passed}/{total} 通过")
         if passed == total:
-            logger.info("✓✓✓ 所有测试通过！")
-            logger.info("✓ P-1修复验证：注册和认证使用相同的BCH纠错后的S")
-            logger.info("✓ P-2修复验证：Ks使用HKDFExpand派生")
-            logger.info("✓ P-3修复验证：门限正确保存和加载")
+            logger.info("[OK] 所有测试通过！")
+            logger.info("[OK] P-1修复验证：注册和认证使用相同的BCH纠错后的S")
+            logger.info("[OK] P-2修复验证：Ks使用HKDFExpand派生")
+            logger.info("[OK] P-3修复验证：门限正确保存和加载")
         else:
-            logger.error("✗✗✗ 部分测试失败，需要修复")
+            logger.error("[FAIL] 部分测试失败，需要修复")
         logger.info("="*80)
         logger.info(f"详细日志已保存到: {log_file}")
         logger.info("="*80 + "\n")

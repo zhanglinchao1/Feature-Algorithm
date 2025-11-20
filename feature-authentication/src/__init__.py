@@ -27,6 +27,7 @@ from .common import (
     MAT,
 )
 from .token_manager import TokenFastManager, MATManager
+from .mode1_rff_auth import Mode1FastAuth, RFFMatcher, RFFTemplate
 from .mode2_strong_auth import DeviceSide, VerifierSide
 
 __all__ = [
@@ -40,6 +41,9 @@ __all__ = [
     'MAT',
     'TokenFastManager',
     'MATManager',
+    'Mode1FastAuth',
+    'RFFMatcher',
+    'RFFTemplate',
     'DeviceSide',
     'VerifierSide',
 ]

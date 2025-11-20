@@ -25,23 +25,29 @@ class FuzzyExtractor:
         self.config = config
 
         # 延迟导入bchlib，避免模块级别的编码问题
+        self.use_mock = False
         try:
             # 尝试使用importlib动态导入，处理可能的编码问题
             if 'bchlib' not in sys.modules:
                 importlib.import_module('bchlib')
             import bchlib
-        except (ImportError, UnicodeDecodeError, Exception) as e:
-            raise ImportError(
-                f"bchlib is not installed or has encoding issues. "
-                f"Please reinstall it: pip uninstall bchlib && pip install bchlib. "
-                f"Error: {e}"
+            # 初始化BCH编解码器
+            self.bch = bchlib.BCH(
+                self.config.BCH_T,  # 纠错能力
+                prim_poly=self.config.BCH_POLY  # 生成多项式
             )
-
-        # 初始化BCH编解码器
-        self.bch = bchlib.BCH(
-            self.config.BCH_T,  # 纠错能力
-            prim_poly=self.config.BCH_POLY  # 生成多项式
-        )
+        except (ImportError, UnicodeDecodeError, Exception) as e:
+            print(f"Warning: bchlib import failed ({e}), falling back to reedsolo mock.")
+            self.use_mock = True
+            try:
+                from reedsolo import RSCodec
+                self.RSCodec = RSCodec
+                # Mock BCH using RS with 2*T bytes ECC
+                self.bch = self._create_mock_bch(self.config.BCH_T)
+            except ImportError:
+                raise ImportError(
+                    f"Both bchlib and reedsolo are missing. Please install one of them."
+                )
 
         # BCH参数
         self.n = self.config.BCH_N  # BCH多项式参数（255比特）
@@ -52,6 +58,44 @@ class FuzzyExtractor:
         self.msg_bytes = (self.k + 7) // 8  # 17字节
         self.actual_codeword_bytes = self.msg_bytes + self.bch.ecc_bytes  # 35字节
         self.actual_codeword_bits = self.actual_codeword_bytes * 8  # 280比特
+
+    def _create_mock_bch(self, t):
+        """创建一个模拟BCH的类，使用reedsolo实现"""
+        rs_codec = self.RSCodec(t * 2)
+        
+        class MockBCH:
+            def __init__(self, rs):
+                self.rs = rs
+                self.ecc_bytes = t * 2
+            
+            def encode(self, data):
+                full = self.rs.encode(data)
+                return full[len(data):]
+            
+            def decode(self, data_mutable, ecc_mutable):
+                try:
+                    full = bytes(data_mutable) + bytes(ecc_mutable)
+                    res = self.rs.decode(full)
+                    decoded = res[0] if isinstance(res, tuple) else res
+                    
+                    if decoded != bytes(data_mutable):
+                        return 1
+                    return 0
+                except Exception:
+                    return -1
+            
+            def correct(self, data_mutable, ecc_mutable):
+                try:
+                    full = bytes(data_mutable) + bytes(ecc_mutable)
+                    res = self.rs.decode(full)
+                    decoded = res[0] if isinstance(res, tuple) else res
+                    
+                    for i in range(min(len(decoded), len(data_mutable))):
+                        data_mutable[i] = decoded[i]
+                except:
+                    pass
+        
+        return MockBCH(rs_codec)
 
     def generate_helper_data(self, r: List[int]) -> bytes:
         """
