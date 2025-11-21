@@ -1,0 +1,398 @@
+{
+	"info": {
+		"_postman_id": "12345678-1234-1234-1234-123456789012",
+		"name": "特征认证API测试",
+		"description": "基于特征的身份认证API - 模式1（RFF快速认证）和模式2（强认证）",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "管理",
+			"item": [
+				{
+					"name": "获取服务器状态",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/status",
+							"host": ["{{base_url}}"],
+							"path": ["api", "status"]
+						},
+						"description": "获取服务器当前状态，包括模式1和模式2的初始化情况及设备数量"
+					},
+					"response": []
+				},
+				{
+					"name": "重置服务器状态",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/reset",
+							"host": ["{{base_url}}"],
+							"path": ["api", "reset"]
+						},
+						"description": "重置所有服务器状态，清除已注册的设备和会话"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "模式1 - RFF快速认证",
+			"item": [
+				{
+					"name": "1. 注册设备",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"状态码为200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"注册成功\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data.registered).to.be.true;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"dev_id\": \"{{dev_id}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/device/mode1/register",
+							"host": ["{{base_url}}"],
+							"path": ["api", "device", "mode1", "register"]
+						},
+						"description": "在模式1中注册设备"
+					},
+					"response": []
+				},
+				{
+					"name": "2. RFF认证 - 成功",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"状态码为200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"认证成功\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data.authenticated).to.be.true;",
+									"    pm.expect(jsonData.data.decision).to.eql(\"ACCEPT\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"dev_id\": \"{{dev_id}}\",\n    \"rff_score\": 0.85,\n    \"rff_confidence\": 0.90,\n    \"snr\": 20.0\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/device/mode1/authenticate",
+							"host": ["{{base_url}}"],
+							"path": ["api", "device", "mode1", "authenticate"]
+						},
+						"description": "使用高RFF分数进行认证（应成功）"
+					},
+					"response": []
+				},
+				{
+					"name": "3. RFF认证 - 失败（低RFF分数）",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"状态码为200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"认证失败\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data.authenticated).to.be.false;",
+									"    pm.expect(jsonData.data.decision).to.eql(\"REJECT\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"dev_id\": \"{{dev_id}}\",\n    \"rff_score\": 0.5,\n    \"rff_confidence\": 0.7,\n    \"snr\": 20.0\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/device/mode1/authenticate",
+							"host": ["{{base_url}}"],
+							"path": ["api", "device", "mode1", "authenticate"]
+						},
+						"description": "使用低RFF分数进行认证（应失败）"
+					},
+					"response": []
+				},
+				{
+					"name": "4. RFF认证 - 失败（低SNR）",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"状态码为200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"认证失败或成功\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"dev_id\": \"{{dev_id}}\",\n    \"rff_score\": 0.85,\n    \"rff_confidence\": 0.90,\n    \"snr\": 5.0\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/device/mode1/authenticate",
+							"host": ["{{base_url}}"],
+							"path": ["api", "device", "mode1", "authenticate"]
+						},
+						"description": "使用低SNR进行认证"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "模式2 - 强认证",
+			"item": [
+				{
+					"name": "1. 设备端创建认证请求",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"状态码为200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"请求创建成功\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data.auth_req).to.exist;",
+									"    pm.expect(jsonData.data.session_key).to.exist;",
+									"    pm.expect(jsonData.data.feature_key).to.exist;",
+									"    ",
+									"    // 保存到环境变量",
+									"    pm.environment.set(\"auth_req\", jsonData.data.auth_req);",
+									"    pm.environment.set(\"session_key\", jsonData.data.session_key);",
+									"    pm.environment.set(\"feature_key\", jsonData.data.feature_key);",
+									"    pm.environment.set(\"epoch\", jsonData.data.epoch);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"dev_id\": \"{{dev_id}}\",\n    \"dst_mac\": \"{{dst_mac}}\",\n    \"csi\": [\n        [0.5, -0.3, 0.8, 0.2, -0.1, 0.6, 0.4, -0.2, 0.7, 0.3, 0.5, -0.3, 0.8, 0.2, -0.1, 0.6, 0.4, -0.2, 0.7, 0.3, 0.5, -0.3, 0.8, 0.2, -0.1, 0.6, 0.4, -0.2, 0.7, 0.3, 0.5, -0.3, 0.8, 0.2, -0.1, 0.6, 0.4, -0.2, 0.7, 0.3, 0.5, -0.3, 0.8, 0.2, -0.1, 0.6, 0.4, -0.2, 0.7, 0.3, 0.5, -0.3, 0.8, 0.2, -0.1, 0.6, 0.4, -0.2, 0.7, 0.3, 0.5, -0.3],\n        [0.4, -0.2, 0.7, 0.3, -0.2, 0.5, 0.3, -0.1, 0.6, 0.2, 0.4, -0.2, 0.7, 0.3, -0.2, 0.5, 0.3, -0.1, 0.6, 0.2, 0.4, -0.2, 0.7, 0.3, -0.2, 0.5, 0.3, -0.1, 0.6, 0.2, 0.4, -0.2, 0.7, 0.3, -0.2, 0.5, 0.3, -0.1, 0.6, 0.2, 0.4, -0.2, 0.7, 0.3, -0.2, 0.5, 0.3, -0.1, 0.6, 0.2, 0.4, -0.2, 0.7, 0.3, -0.2, 0.5, 0.3, -0.1, 0.6, 0.2, 0.4, -0.2],\n        [0.5, -0.3, 0.8, 0.2, -0.1, 0.6, 0.4, -0.2, 0.7, 0.3, 0.5, -0.3, 0.8, 0.2, -0.1, 0.6, 0.4, -0.2, 0.7, 0.3, 0.5, -0.3, 0.8, 0.2, -0.1, 0.6, 0.4, -0.2, 0.7, 0.3, 0.5, -0.3, 0.8, 0.2, -0.1, 0.6, 0.4, -0.2, 0.7, 0.3, 0.5, -0.3, 0.8, 0.2, -0.1, 0.6, 0.4, -0.2, 0.7, 0.3, 0.5, -0.3, 0.8, 0.2, -0.1, 0.6, 0.4, -0.2, 0.7, 0.3, 0.5, -0.3],\n        [0.4, -0.2, 0.7, 0.3, -0.2, 0.5, 0.3, -0.1, 0.6, 0.2, 0.4, -0.2, 0.7, 0.3, -0.2, 0.5, 0.3, -0.1, 0.6, 0.2, 0.4, -0.2, 0.7, 0.3, -0.2, 0.5, 0.3, -0.1, 0.6, 0.2, 0.4, -0.2, 0.7, 0.3, -0.2, 0.5, 0.3, -0.1, 0.6, 0.2, 0.4, -0.2, 0.7, 0.3, -0.2, 0.5, 0.3, -0.1, 0.6, 0.2, 0.4, -0.2, 0.7, 0.3, -0.2, 0.5, 0.3, -0.1, 0.6, 0.2, 0.4, -0.2],\n        [0.5, -0.3, 0.8, 0.2, -0.1, 0.6, 0.4, -0.2, 0.7, 0.3, 0.5, -0.3, 0.8, 0.2, -0.1, 0.6, 0.4, -0.2, 0.7, 0.3, 0.5, -0.3, 0.8, 0.2, -0.1, 0.6, 0.4, -0.2, 0.7, 0.3, 0.5, -0.3, 0.8, 0.2, -0.1, 0.6, 0.4, -0.2, 0.7, 0.3, 0.5, -0.3, 0.8, 0.2, -0.1, 0.6, 0.4, -0.2, 0.7, 0.3, 0.5, -0.3, 0.8, 0.2, -0.1, 0.6, 0.4, -0.2, 0.7, 0.3, 0.5, -0.3],\n        [0.4, -0.2, 0.7, 0.3, -0.2, 0.5, 0.3, -0.1, 0.6, 0.2, 0.4, -0.2, 0.7, 0.3, -0.2, 0.5, 0.3, -0.1, 0.6, 0.2, 0.4, -0.2, 0.7, 0.3, -0.2, 0.5, 0.3, -0.1, 0.6, 0.2, 0.4, -0.2, 0.7, 0.3, -0.2, 0.5, 0.3, -0.1, 0.6, 0.2, 0.4, -0.2, 0.7, 0.3, -0.2, 0.5, 0.3, -0.1, 0.6, 0.2, 0.4, -0.2, 0.7, 0.3, -0.2, 0.5, 0.3, -0.1, 0.6, 0.2, 0.4, -0.2]\n    ],\n    \"seq\": 1,\n    \"csi_id\": 12345\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/device/mode2/create_request",
+							"host": ["{{base_url}}"],
+							"path": ["api", "device", "mode2", "create_request"]
+						},
+						"description": "设备端创建认证请求，生成session_key和feature_key"
+					},
+					"response": []
+				},
+				{
+					"name": "2. 验证端注册设备",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"状态码为200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"设备注册成功\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data.registered).to.be.true;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"dev_id\": \"{{dev_id}}\",\n    \"feature_key\": \"{{feature_key}}\",\n    \"epoch\": {{epoch}}\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/verifier/mode2/register",
+							"host": ["{{base_url}}"],
+							"path": ["api", "verifier", "mode2", "register"]
+						},
+						"description": "验证端注册设备，使用步骤1返回的feature_key"
+					},
+					"response": []
+				},
+				{
+					"name": "3. 验证端验证请求",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"状态码为200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"认证成功\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.success).to.be.true;",
+									"    pm.expect(jsonData.data.authenticated).to.be.true;",
+									"    ",
+									"    // 验证session_key是否匹配",
+									"    var device_session_key = pm.environment.get(\"session_key\");",
+									"    pm.expect(jsonData.data.session_key).to.eql(device_session_key);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"auth_req\": \"{{auth_req}}\",\n    \"csi\": [\n        [0.5, -0.3, 0.8, 0.2, -0.1, 0.6, 0.4, -0.2, 0.7, 0.3, 0.5, -0.3, 0.8, 0.2, -0.1, 0.6, 0.4, -0.2, 0.7, 0.3, 0.5, -0.3, 0.8, 0.2, -0.1, 0.6, 0.4, -0.2, 0.7, 0.3, 0.5, -0.3, 0.8, 0.2, -0.1, 0.6, 0.4, -0.2, 0.7, 0.3, 0.5, -0.3, 0.8, 0.2, -0.1, 0.6, 0.4, -0.2, 0.7, 0.3, 0.5, -0.3, 0.8, 0.2, -0.1, 0.6, 0.4, -0.2, 0.7, 0.3, 0.5, -0.3],\n        [0.4, -0.2, 0.7, 0.3, -0.2, 0.5, 0.3, -0.1, 0.6, 0.2, 0.4, -0.2, 0.7, 0.3, -0.2, 0.5, 0.3, -0.1, 0.6, 0.2, 0.4, -0.2, 0.7, 0.3, -0.2, 0.5, 0.3, -0.1, 0.6, 0.2, 0.4, -0.2, 0.7, 0.3, -0.2, 0.5, 0.3, -0.1, 0.6, 0.2, 0.4, -0.2, 0.7, 0.3, -0.2, 0.5, 0.3, -0.1, 0.6, 0.2, 0.4, -0.2, 0.7, 0.3, -0.2, 0.5, 0.3, -0.1, 0.6, 0.2, 0.4, -0.2],\n        [0.5, -0.3, 0.8, 0.2, -0.1, 0.6, 0.4, -0.2, 0.7, 0.3, 0.5, -0.3, 0.8, 0.2, -0.1, 0.6, 0.4, -0.2, 0.7, 0.3, 0.5, -0.3, 0.8, 0.2, -0.1, 0.6, 0.4, -0.2, 0.7, 0.3, 0.5, -0.3, 0.8, 0.2, -0.1, 0.6, 0.4, -0.2, 0.7, 0.3, 0.5, -0.3, 0.8, 0.2, -0.1, 0.6, 0.4, -0.2, 0.7, 0.3, 0.5, -0.3, 0.8, 0.2, -0.1, 0.6, 0.4, -0.2, 0.7, 0.3, 0.5, -0.3],\n        [0.4, -0.2, 0.7, 0.3, -0.2, 0.5, 0.3, -0.1, 0.6, 0.2, 0.4, -0.2, 0.7, 0.3, -0.2, 0.5, 0.3, -0.1, 0.6, 0.2, 0.4, -0.2, 0.7, 0.3, -0.2, 0.5, 0.3, -0.1, 0.6, 0.2, 0.4, -0.2, 0.7, 0.3, -0.2, 0.5, 0.3, -0.1, 0.6, 0.2, 0.4, -0.2, 0.7, 0.3, -0.2, 0.5, 0.3, -0.1, 0.6, 0.2, 0.4, -0.2, 0.7, 0.3, -0.2, 0.5, 0.3, -0.1, 0.6, 0.2, 0.4, -0.2],\n        [0.5, -0.3, 0.8, 0.2, -0.1, 0.6, 0.4, -0.2, 0.7, 0.3, 0.5, -0.3, 0.8, 0.2, -0.1, 0.6, 0.4, -0.2, 0.7, 0.3, 0.5, -0.3, 0.8, 0.2, -0.1, 0.6, 0.4, -0.2, 0.7, 0.3, 0.5, -0.3, 0.8, 0.2, -0.1, 0.6, 0.4, -0.2, 0.7, 0.3, 0.5, -0.3, 0.8, 0.2, -0.1, 0.6, 0.4, -0.2, 0.7, 0.3, 0.5, -0.3, 0.8, 0.2, -0.1, 0.6, 0.4, -0.2, 0.7, 0.3, 0.5, -0.3],\n        [0.4, -0.2, 0.7, 0.3, -0.2, 0.5, 0.3, -0.1, 0.6, 0.2, 0.4, -0.2, 0.7, 0.3, -0.2, 0.5, 0.3, -0.1, 0.6, 0.2, 0.4, -0.2, 0.7, 0.3, -0.2, 0.5, 0.3, -0.1, 0.6, 0.2, 0.4, -0.2, 0.7, 0.3, -0.2, 0.5, 0.3, -0.1, 0.6, 0.2, 0.4, -0.2, 0.7, 0.3, -0.2, 0.5, 0.3, -0.1, 0.6, 0.2, 0.4, -0.2, 0.7, 0.3, -0.2, 0.5, 0.3, -0.1, 0.6, 0.2, 0.4, -0.2]\n    ]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/verifier/mode2/verify",
+							"host": ["{{base_url}}"],
+							"path": ["api", "verifier", "mode2", "verify"]
+						},
+						"description": "验证端验证认证请求，使用步骤1返回的auth_req和相同的CSI"
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:5000",
+			"type": "string"
+		},
+		{
+			"key": "dev_id",
+			"value": "001122334455",
+			"type": "string"
+		},
+		{
+			"key": "dst_mac",
+			"value": "AABBCCDDEEFF",
+			"type": "string"
+		}
+	]
+}
+
