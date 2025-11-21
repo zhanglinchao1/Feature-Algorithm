@@ -13,7 +13,13 @@ from typing import Optional, Dict, Any, Tuple
 from dataclasses import dataclass
 
 # 添加路径
-feature_auth_path = Path(__file__).parent / 'feature-authentication'
+# 从src目录往上一级到项目根目录
+project_root = Path(__file__).parent.parent
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+
+# 添加feature-authentication到路径
+feature_auth_path = project_root / 'feature-authentication'
 if str(feature_auth_path) not in sys.path:
     sys.path.insert(0, str(feature_auth_path))
 

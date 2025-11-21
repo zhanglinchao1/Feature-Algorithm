@@ -29,7 +29,7 @@ from src.common import AuthContext, AuthReq
 
 
 class DistributedDevice:
-    """模拟独立部署的IoT设备"""
+    """模拟独立部署的设备"""
 
     def __init__(self, device_mac: bytes, domain: str = "FeatureAuth"):
         self.device_mac = device_mac
@@ -73,7 +73,7 @@ class DistributedDevice:
 
 
 class DistributedGateway:
-    """模拟独立部署的网关/验证节点"""
+    """模拟独立部署的验证节点"""
 
     def __init__(self, gateway_mac: bytes, gateway_key: bytes,
                  domain: str = "FeatureAuth"):
