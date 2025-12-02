@@ -138,7 +138,7 @@ def compute_mac(key: bytes, data: bytes, algorithm: str = 'blake3', length: Opti
         key: 密钥
         data: 输入数据
         algorithm: MAC算法（'blake3' 或 'hmac-sha256'）
-        length: 输出长度（仅blake3支持）
+        length: 输出长度（blake3原生支持，hmac-sha256通过截断实现）
 
     Returns:
         bytes: MAC值
@@ -151,12 +151,19 @@ def compute_mac(key: bytes, data: bytes, algorithm: str = 'blake3', length: Opti
     if algorithm == 'blake3':
         if not BLAKE3_AVAILABLE:
             logger.warning("blake3 not available, falling back to hmac-sha256")
-            return hmac_sha256_mac(key, data)
+            mac = hmac_sha256_mac(key, data)
+            # 如果指定了length，截断结果
+            if length is not None and length != 32:
+                return truncate(mac, length)
+            return mac
         return blake3_mac(key, data, length)
     elif algorithm == 'hmac-sha256':
+        mac = hmac_sha256_mac(key, data)
+        # 如果指定了length，截断结果
         if length is not None and length != 32:
-            logger.warning(f"HMAC-SHA256 always outputs 32 bytes, ignoring length={length}")
-        return hmac_sha256_mac(key, data)
+            logger.debug(f"HMAC-SHA256 outputs 32 bytes, truncating to {length} bytes")
+            return truncate(mac, length)
+        return mac
     else:
         raise ValueError(f"Unsupported MAC algorithm: {algorithm}")
 

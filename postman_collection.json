@@ -26,7 +26,23 @@
 						},
 						"description": "获取服务器当前状态，包括模式1和模式2的初始化情况及设备数量"
 					},
-					"response": []
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n  \"data\": {\n    \"mode1\": {\n      \"devices_count\": 0,\n      \"initialized\": false\n    },\n    \"mode2\": {\n      \"device_side_initialized\": false,\n      \"devices_count\": 0,\n      \"sessions_count\": 0,\n      \"verifier_side_initialized\": false\n    },\n    \"server_version\": \"1.0.0\"\n  },\n  \"success\": true,\n  \"timestamp\": 1763712950.7124913\n}"
+						}
+					]
 				},
 				{
 					"name": "重置服务器状态",
@@ -45,7 +61,23 @@
 						},
 						"description": "重置所有服务器状态，清除已注册的设备和会话"
 					},
-					"response": []
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n  \"data\": {\n    \"message\": \"Server state reset successfully\"\n  },\n  \"success\": true,\n  \"timestamp\": 1763712950.7184901\n}"
+						}
+					]
 				}
 			]
 		},
@@ -99,7 +131,23 @@
 						},
 						"description": "在模式1中注册设备"
 					},
-					"response": []
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n  \"data\": {\n    \"dev_id\": \"001122334455\",\n    \"registered\": true,\n    \"total_devices\": 1\n  },\n  \"success\": true,\n  \"timestamp\": 1763712950.724771\n}"
+						}
+					]
 				},
 				{
 					"name": "2. RFF认证 - 成功",
@@ -149,7 +197,23 @@
 						},
 						"description": "使用高RFF分数进行认证（应成功）"
 					},
-					"response": []
+					"response": [
+						{
+							"name": "Authentication Success",
+							"originalRequest": {},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n  \"data\": {\n    \"authenticated\": true,\n    \"decision\": \"ACCEPT\",\n    \"dev_id\": \"001122334455\",\n    \"latency_ms\": 2.51,\n    \"reason\": null,\n    \"token_fast\": \"ABEiM0RVth8gafIfIGkHZGVmYXVsdDkHhntcQHrWWZa77WSKt00=\",\n    \"token_size\": 38\n  },\n  \"success\": true,\n  \"timestamp\": 1763712950.7337577\n}"
+						}
+					]
 				},
 				{
 					"name": "3. RFF认证 - 失败（低RFF分数）",
@@ -199,7 +263,23 @@
 						},
 						"description": "使用低RFF分数进行认证（应失败）"
 					},
-					"response": []
+					"response": [
+						{
+							"name": "Authentication Failed - Low Score",
+							"originalRequest": {},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n  \"data\": {\n    \"authenticated\": false,\n    \"decision\": \"REJECT\",\n    \"dev_id\": \"001122334455\",\n    \"latency_ms\": 1.71,\n    \"reason\": \"rff_failed\",\n    \"token_fast\": null,\n    \"token_size\": 0\n  },\n  \"success\": true,\n  \"timestamp\": 1763712950.7409883\n}"
+						}
+					]
 				},
 				{
 					"name": "4. RFF认证 - 失败（低SNR）",
@@ -247,7 +327,23 @@
 						},
 						"description": "使用低SNR进行认证"
 					},
-					"response": []
+					"response": [
+						{
+							"name": "Authentication Failed - Low SNR",
+							"originalRequest": {},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n  \"data\": {\n    \"authenticated\": false,\n    \"decision\": \"REJECT\",\n    \"dev_id\": \"001122334455\",\n    \"latency_ms\": 0.85,\n    \"reason\": \"rff_failed\",\n    \"token_fast\": null,\n    \"token_size\": 0\n  },\n  \"success\": true,\n  \"timestamp\": 1763712950.7465954\n}"
+						}
+					]
 				}
 			]
 		},
@@ -309,7 +405,23 @@
 						},
 						"description": "设备端创建认证请求，生成session_key和feature_key"
 					},
-					"response": []
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n  \"data\": {\n    \"auth_req\": \"SkJ045iHfLtU4n4lOTAAAAAAAADYFQGGOVYAX54So1L7a/3iAQAAAAVNb2RlMgHvCdmdGJf6yKs/ukBp/bkwb1SWiefT8M4=\",\n    \"dev_pseudo\": \"4a4274e398877cbb54e27e25\",\n    \"digest\": \"ef09d99d1897fac8\",\n    \"epoch\": 0,\n    \"feature_key\": \"c103688ddd24681da8c0440a3ed245759ed62f47b5cc2848c78804b848ebe182\",\n    \"latency_ms\": 55.78,\n    \"session_key\": \"55c57e88837716e5610f770d999cd033e7ea1a51b77dfb375da31c73aa8edcba\"\n  },\n  \"success\": true,\n  \"timestamp\": 1763712950.8199146\n}"
+						}
+					]
 				},
 				{
 					"name": "2. 验证端注册设备",
@@ -358,7 +470,23 @@
 						},
 						"description": "验证端注册设备，使用步骤1返回的feature_key"
 					},
-					"response": []
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n  \"data\": {\n    \"dev_id\": \"001122334455\",\n    \"registered\": true,\n    \"total_devices\": 1\n  },\n  \"success\": true,\n  \"timestamp\": 1763712950.8335133\n}"
+						}
+					]
 				},
 				{
 					"name": "3. 验证端验证请求",
@@ -411,7 +539,23 @@
 						},
 						"description": "验证端验证认证请求，使用步骤1返回的auth_req和相同的CSI"
 					},
-					"response": []
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n  \"data\": {\n    \"authenticated\": true,\n    \"dev_id\": \"001122334455\",\n    \"epoch\": 0,\n    \"latency_ms\": 6.84,\n    \"mat_token\": \"qrvM3e7/SkJ045iHfLtU4n4lAAAAACwBAAAKCMV6d/XBbQdj6jjb6ccFBKPCDSN8TJy+H58NMkSOAtBxMDQSU9Ig83KnP+mFF0U=\",\n    \"reason\": null,\n    \"session_key\": \"55c57e88837716e5610f770d999cd033e7ea1a51b77dfb375da31c73aa8edcba\",\n    \"token_size\": 74\n  },\n  \"success\": true,\n  \"timestamp\": 1763712950.846709\n}"
+						}
+					]
 				}
 			]
 		}
